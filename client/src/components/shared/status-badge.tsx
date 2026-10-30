@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 // One badge for every status the dashboard shows: an agent's, a PR's QA round, GitHub's checks.
 
 const TONE: Record<Tone, string> = {
-  neutral: 'border-border bg-muted text-muted-foreground',
+  neutral: 'border-border text-muted-foreground',
   info: 'border-info/30 bg-info/10 text-info',
   success: 'border-success/30 bg-success/10 text-success',
   warning: 'border-warning/30 bg-warning/10 text-warning',
@@ -22,10 +22,15 @@ const DOT: Record<Tone, string> = {
 
 export function StatusBadge({ kind, status, className }: { kind: 'agent' | 'qa' | 'checks'; status: string; className?: string }) {
   const look = statusLook(kind, status);
+  return <ToneBadge tone={look.tone} label={look.label} className={className} />;
+}
+
+/** The same badge for any other state: a label in a tone. */
+export function ToneBadge({ tone, label, className }: { tone: Tone; label: string; className?: string }) {
   return (
-    <Badge variant="outline" className={cn('gap-1.5 font-medium', TONE[look.tone], className)}>
-      <span className={cn('size-1.5 rounded-full', DOT[look.tone])} aria-hidden />
-      {look.label}
+    <Badge variant="outline" className={cn('gap-1.5 font-medium', TONE[tone], className)}>
+      <span className={cn('size-1.5 rounded-full', DOT[tone])} aria-hidden />
+      {label}
     </Badge>
   );
 }
