@@ -63,8 +63,10 @@ interface State {
   floor: number;
   watched: Record<string, number>;
   workers: number;
-  /** The CEO chat sheet is open: CEO messages are being read, so they don't toast. */
+  /** The CEO chat sheet is open. */
   ceoOpen: boolean;
+  /** CEO threads on screen (the sheet's or the CEO page's): while any is, CEO messages are being read and don't toast. */
+  chatViews: number;
 
   /** Folds an event into the state. */
   apply(ev: ServerEvent): void;
@@ -77,6 +79,8 @@ interface State {
   /** A workers list opened (+1) or closed (-1): useWorkersWatch. */
   watchWorkers(by: 1 | -1): void;
   setCeoOpen(v: boolean): void;
+  /** A CEO thread mounted (+1) or unmounted (-1). */
+  watchChat(by: 1 | -1): void;
   pushToast(level: ToastLevel, text: string): void;
 }
 
@@ -148,6 +152,7 @@ export const useStore = create<State>((set, get) => ({
   watched: {},
   workers: 0,
   ceoOpen: false,
+  chatViews: 0,
 
   apply(ev) {
     // Toasts for news compare the old state with the new; snapshots (page load, reconnect) never toast.
@@ -302,10 +307,13 @@ export const useStore = create<State>((set, get) => ({
         break;
       case 'message': {
         set({ messages: [...get().messages.slice(-199), ev.message] });
-        if (live && ev.message.from === 'ceo' && !get().ceoOpen) {
+        if (live && ev.message.from === 'ceo' && !get().ceoOpen && !get().chatViews) {
           const ceo = get().agents[CEO_ID]?.name ?? 'CEO';
           const text = ev.message.text.replace(/\s+/g, ' ');
-          get().pushToast('info', `${ceo}: ${text.length > 110 ? `${text.slice(0, 109)}…` : text}`);
+          toast(`${ceo}: ${text.length > 110 ? `${text.slice(0, 109)}…` : text}`, {
+            id: `ceo-${ev.message.id}`,
+            action: { label: 'Open chat', onClick: () => set({ ceoOpen: true }) },
+          });
         }
         break;
       }
@@ -376,6 +384,7 @@ export const useStore = create<State>((set, get) => ({
   watchAgents: (ids, by) => set({ watched: countWatch(get().watched, ids, by) }),
   watchWorkers: (by) => set({ workers: Math.max(0, get().workers + by) }),
   setCeoOpen: (ceoOpen) => set({ ceoOpen }),
+  watchChat: (by) => set({ chatViews: Math.max(0, get().chatViews + by) }),
   pushToast(level, text) {
     if (level === 'error') toast.error(text, { duration: 9000 });
     else if (level === 'success') toast.success(text);
