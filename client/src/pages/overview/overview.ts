@@ -1,7 +1,8 @@
 // Mission control's derivations: a project's pipeline as bar segments, the projects table's sort, the 24 h merges
 // chart's points and its text alternative, the activity feed's filter. Pure, so they're tested without a browser.
 
-import type { OpsFloor, OpsNumbers, TickerItem } from '../../../../shared/types';
+import type { OpsAlarm, OpsFloor, OpsNumbers, TickerItem } from '../../../../shared/types';
+import { links } from '../../lib/links';
 import type { Tone } from '@/lib/status';
 
 /** Runs a command; api() has already toasted a failure, so it only resolves to undefined. */
@@ -13,7 +14,11 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
-export type Stage ='ready' | 'building' | 'inQa' | 'fixing' | 'toMerge' | 'needsYou';
+/** Where an alarm opens: a PR's card on its project's board, or the stuck agent's page. */
+export const alarmLink = (a: OpsAlarm) =>
+  a.kind === 'pr' && a.prNumber !== null ? links.board(a.repoId, { kind: 'pr', number: a.prNumber }) : a.agentId ? links.agent(a.agentId) : links.board(a.repoId);
+
+export type Stage = 'ready' | 'building' | 'inQa' | 'fixing' | 'toMerge' | 'needsYou';
 
 export const STAGES: { key: Stage; label: string; tone: Tone; hint: string }[] = [
   { key: 'ready', label: 'Ready', tone: 'neutral', hint: 'Backlog issues that can start now' },

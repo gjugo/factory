@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { OpsFloor, TickerItem } from '../../../../shared/types';
+import type { OpsAlarm, OpsFloor, TickerItem } from '../../../../shared/types';
 import { EMPTY_NUMBERS } from '../../ops';
-import { feedItems, nextSort, pipelineSegments, pipelineText, sortFloors, sparkPoints, sparkSummary, type FloorRow } from './overview';
+import { alarmLink, feedItems, nextSort, pipelineSegments, pipelineText, sortFloors, sparkPoints, sparkSummary, type FloorRow } from './overview';
 
 const floor = (n: number, patch: Partial<OpsFloor> = {}): OpsFloor => ({ ...EMPTY_NUMBERS, repoId: `o/r${n}`, floor: n, alarms: 0, ...patch });
 const row = (name: string, f: OpsFloor): FloorRow => ({ name, floor: f });
@@ -85,5 +85,15 @@ describe('the activity feed', () => {
     expect(feedItems(ticker, null, 10).map((t) => t.id)).toEqual([4, 3, 2, 1]);
     expect(feedItems(ticker, 'o/a', 2).map((t) => t.id)).toEqual([4, 3]);
     expect(feedItems(ticker, 'o/b', 10).map((t) => t.id)).toEqual([2]);
+  });
+});
+
+describe('alarm links', () => {
+  const alarm = (patch: Partial<OpsAlarm>): OpsAlarm => ({ id: 'x', kind: 'pr', repoId: 'demo-co/pixel-todo', floor: 1, prNumber: null, agentId: null, text: '', since: 0, ...patch });
+
+  it('opens a PR alarm at its board card, an agent alarm at the agent', () => {
+    expect(alarmLink(alarm({ prNumber: 34 }))).toBe('/projects/demo-co/pixel-todo?card=pr-34');
+    expect(alarmLink(alarm({ kind: 'agent', agentId: 'a 1' }))).toBe('/agents/a%201');
+    expect(alarmLink(alarm({}))).toBe('/projects/demo-co/pixel-todo');
   });
 });

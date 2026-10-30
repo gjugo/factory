@@ -7,15 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/api';
 import { projectName } from '@/hooks/use-project-rows';
-import { links } from '@/lib/links';
 import { useStore } from '@/store';
-import { attempt } from './overview';
+import { alarmLink, attempt } from './overview';
 
 // ops.alarms, oldest first: PRs the office can't move without the manager, and agents stuck on an error. Each opens
 // its board card or agent page, with the quick fixes cubefarm's console offers.
-
-export const alarmLink = (a: OpsAlarm) =>
-  a.kind === 'pr' && a.prNumber !== null ? links.board(a.repoId, { kind: 'pr', number: a.prNumber }) : a.agentId ? links.agent(a.agentId) : links.board(a.repoId);
 
 function Alarm({ alarm: a }: { alarm: OpsAlarm }) {
   const repo = useStore((s) => s.repos.find((r) => r.id === a.repoId));
