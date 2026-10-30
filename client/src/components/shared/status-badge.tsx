@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 // One badge for every status the dashboard shows: an agent's, a PR's QA round, GitHub's checks.
 
 const TONE: Record<Tone, string> = {
-  neutral: 'border-border bg-muted text-muted-foreground',
+  neutral: 'border-border bg-transparent text-muted-foreground', // muted text on the muted fill reads under 4.5:1
   info: 'border-info/30 bg-info/10 text-info',
   success: 'border-success/30 bg-success/10 text-success',
   warning: 'border-warning/30 bg-warning/10 text-warning',
