@@ -1,0 +1,38 @@
+// Every URL in the dashboard, built in one place so pages never hand-write a path. A project is a cubefarm floor,
+// addressed by its GitHub owner/name; board cards open from the board's ?card= (issue-12, pr-34).
+
+export const links = {
+  overview: () => '/',
+  projects: () => '/projects',
+  /** The projects page with the add-a-project dialog open. */
+  addProject: () => '/projects?add=1',
+  board: (repoId: string, card?: BoardCard) => `/projects/${repoPath(repoId)}${card ? `?card=${cardParam(card)}` : ''}`,
+  projectSettings: (repoId: string) => `/projects/${repoPath(repoId)}/settings`,
+  agents: () => '/agents',
+  agent: (id: string) => `/agents/${encodeURIComponent(id)}`,
+  ceo: () => '/ceo',
+  settings: () => '/settings',
+  setup: () => '/setup',
+};
+
+/** A card on a project's board: an issue or a pull request, by number. */
+export type BoardCard = { kind: 'issue' | 'pr'; number: number };
+
+/** `owner/name` as two path segments, each encoded. */
+export function repoPath(repoId: string): string {
+  const [owner, name = ''] = repoId.split('/');
+  return `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+}
+
+/** The repo id (`owner/name`) from a project route's params; null when either is missing. */
+export function repoIdFrom(params: { owner?: string; name?: string }): string | null {
+  return params.owner && params.name ? `${params.owner}/${params.name}` : null;
+}
+
+export const cardParam = (card: BoardCard) => `${card.kind}-${card.number}`;
+
+/** A board's ?card= value back to a card; null for anything else. */
+export function parseCard(value: string | null): BoardCard | null {
+  const m = /^(issue|pr)-(\d+)$/.exec(value ?? '');
+  return m ? { kind: m[1] as BoardCard['kind'], number: Number(m[2]) } : null;
+}
