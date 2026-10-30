@@ -12,6 +12,7 @@ import { showDesktopNote } from './notifications';
 import { EMPTY_OPS } from './ops';
 import { needsManager, qaCardNote, type CardTone } from './qaCard';
 import { countWatch } from './watch';
+import { markdownToPlainText } from './lib/plain-text';
 
 // The office as this tab knows it: the server's snapshot, then every ServerEvent folded in by apply(). cubefarm's
 // store without the 3D world: no floors to walk, sounds, voice or presence poses, only state the pages read.
@@ -309,7 +310,7 @@ export const useStore = create<State>((set, get) => ({
         set({ messages: [...get().messages.slice(-199), ev.message] });
         if (live && ev.message.from === 'ceo' && !get().ceoOpen && !get().chatViews) {
           const ceo = get().agents[CEO_ID]?.name ?? 'CEO';
-          const text = ev.message.text.replace(/\s+/g, ' ');
+          const text = markdownToPlainText(ev.message.text);
           toast(`${ceo}: ${text.length > 110 ? `${text.slice(0, 109)}…` : text}`, {
             id: `ceo-${ev.message.id}`,
             action: { label: 'Open chat', onClick: () => set({ ceoOpen: true }) },
