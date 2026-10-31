@@ -25,7 +25,7 @@ export function crumbsFor(pathname: string, names: CrumbNames): Crumb[] {
       if (parts.length < 3) return [{ label: 'Projects' }];
       const repoId = `${parts[1]}/${parts[2]}`;
       const project = { label: names.project(repoId) ?? parts[2], to: `/projects/${repoPath(repoId)}` };
-      return last([{ label: 'Projects', to: links.projects() }, project, ...(parts[3] === 'settings' ? [{ label: 'Settings' }] : [])]);
+      return last([{ label: 'Projects', to: links.projects() }, project, ...(parts[3] === 'settings' ? [{ label: 'Settings' }] : parts[3] === 'app' ? [{ label: 'App' }] : [])]);
     }
     case 'agents':
       if (!parts[1]) return [{ label: 'Agents' }];

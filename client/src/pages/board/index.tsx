@@ -1,8 +1,8 @@
-import { Settings } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
+import { ProjectNav } from '@/components/shared/project-nav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,13 +38,7 @@ export default function BoardPage() {
       <PageHeader
         title={projectName(repo)}
         description={repo.summary || repo.description || repo.fullName}
-        actions={
-          <Button variant="outline" asChild>
-            <Link to={links.projectSettings(repo.id)}>
-              <Settings aria-hidden /> Project settings
-            </Link>
-          </Button>
-        }
+        actions={<ProjectNav repoId={repo.id} />}
       />
       {card && (
         <p className="text-sm text-muted-foreground">

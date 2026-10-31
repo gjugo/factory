@@ -1,9 +1,10 @@
-import { KanbanSquare, Unplug } from 'lucide-react';
+import { Unplug } from 'lucide-react';
 import { useId } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '@/api';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
+import { ProjectNav } from '@/components/shared/project-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,13 +42,7 @@ export default function ProjectSettingsPage() {
       <PageHeader
         title={`${projectName(repo)} settings`}
         description={repo.fullName}
-        actions={
-          <Button asChild variant="outline">
-            <Link to={links.board(repo.id)}>
-              <KanbanSquare aria-hidden /> Board
-            </Link>
-          </Button>
-        }
+        actions={<ProjectNav repoId={repo.id} />}
       />
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <div className="grid min-w-0 content-start gap-6">

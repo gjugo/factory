@@ -4,6 +4,7 @@ import { links } from '@/lib/links';
 import { useStore } from '@/store';
 import AgentPage from '@/pages/agent';
 import AgentsPage from '@/pages/agents';
+import AppViewerPage from '@/pages/app-viewer';
 import BoardPage from '@/pages/board';
 import CeoPage from '@/pages/ceo';
 import NotFoundPage from '@/pages/not-found';
@@ -33,6 +34,7 @@ export function App() {
             <Route index element={<OverviewPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/:owner/:name" element={<BoardPage />} />
+            <Route path="projects/:owner/:name/app" element={<AppViewerPage />} />
             <Route path="projects/:owner/:name/settings" element={<ProjectSettingsPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:id" element={<AgentPage />} />
