@@ -1,4 +1,4 @@
-import { CirclePause, RefreshCw, Turtle, WifiOff } from 'lucide-react';
+import { CirclePause, RefreshCw, TriangleAlert, Turtle, WifiOff } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { officeUpdateChip } from '@/officeUpdate';
@@ -6,7 +6,7 @@ import { usageChip } from '@/ops';
 import { useStore } from '@/store';
 
 // What the manager must know before anything else on the page: the office is out of reach (or restarting to update),
-// an update is on its way, or Claude's usage has new work paused or paced.
+// GitHub isn't ready, an update is on its way, or Claude's usage has new work paused or paced.
 
 function Banner({ tone, icon, children }: { tone: 'danger' | 'warning' | 'info'; icon: ReactNode; children: ReactNode }) {
   const look = { danger: 'border-destructive/30 bg-destructive/10 text-destructive', warning: 'border-warning/30 bg-warning/10 text-warning', info: 'border-info/30 bg-info/10 text-info' }[tone];
@@ -26,6 +26,8 @@ export function Banners() {
   const restarting = useStore((s) => s.restarting);
   const officeUpdate = useStore((s) => s.officeUpdate);
   const usage = useStore((s) => s.usage);
+  const ghReady = useStore((s) => s.ghReady);
+  const ghError = useStore((s) => s.ghError);
   const pacingSessions = useStore((s) => s.settings.pacingSessions);
   const update = officeUpdateChip(officeUpdate);
   const usageLine = usageChip(usage, pacingSessions, Date.now());
@@ -40,6 +42,11 @@ export function Banners() {
       {!connected && !restarting && loaded && (
         <Banner tone="danger" icon={<WifiOff className="size-4" />}>
           Lost the connection to the office. Reconnecting…
+        </Banner>
+      )}
+      {connected && loaded && !ghReady && (
+        <Banner tone="danger" icon={<TriangleAlert className="size-4" />}>
+          GitHub isn't ready: {ghError ?? 'the office could not reach it.'} Projects can't sync until the GitHub CLI is signed in (gh auth login).
         </Banner>
       )}
       {connected && update && (

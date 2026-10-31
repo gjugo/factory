@@ -2,7 +2,8 @@
 // addressed by its GitHub owner/name; board cards open from the board's ?card= (issue-12, pr-34).
 
 export const links = {
-  overview: () => '/',
+  /** Mission control, scrolled to one of its cards. */
+  overview: (section?: OverviewSection) => (section ? `/#${section}` : '/'),
   projects: () => '/projects',
   /** The projects page with the add-a-project dialog open. */
   addProject: () => '/projects?add=1',
@@ -21,6 +22,9 @@ export const links = {
   timelapse: () => '/timelapse',
   setup: () => '/setup',
 };
+
+/** The overview's cards a link can scroll to. */
+export type OverviewSection = 'needs-you' | 'office-doctor';
 
 export const AGENT_TABS = ['terminal', 'settings', 'prompt', 'screen', 'record'] as const;
 export type AgentTab = (typeof AGENT_TABS)[number];

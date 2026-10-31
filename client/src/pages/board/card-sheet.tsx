@@ -1,4 +1,4 @@
-import { Compass, ExternalLink, Hourglass, Link2, SquareTerminal } from 'lucide-react';
+import { AppWindow, Compass, ExternalLink, Hourglass, Link2, SquareTerminal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/shared/markdown';
@@ -175,6 +175,13 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
             <a href={issue.url} target="_blank" rel="noreferrer">
               <ExternalLink aria-hidden /> Issue #{issue.number}
             </a>
+          </Button>
+        )}
+        {isPr && pull?.state === 'OPEN' && (
+          <Button variant="outline" size="sm" asChild>
+            <Link to={links.app(repo.id, { pr: card.prNumber })}>
+              <AppWindow aria-hidden /> Preview
+            </Link>
           </Button>
         )}
         {card.agent && (

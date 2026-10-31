@@ -1,4 +1,4 @@
-import { Bot, Crown, FolderGit2, History, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
+import { Bot, Crown, FolderGit2, History, Keyboard, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { StatusDot } from '@/components/shared/status-badge';
@@ -8,8 +8,9 @@ import { HEALTH_LOOK, useProjectRows } from '@/hooks/use-project-rows';
 import { links } from '@/lib/links';
 import { statusLook } from '@/lib/status';
 import { useStore } from '@/store';
+import { SHORTCUTS_EVENT } from './shortcuts';
 
-// ⌘K / Ctrl+K: jump to a page, a project or an agent.
+// ⌘K / Ctrl+K: jump to a page, a project or an agent, or open the keyboard shortcuts.
 
 const PAGES = [
   { label: 'Overview', to: links.overview(), icon: LayoutDashboard },
@@ -64,6 +65,17 @@ export function CommandMenu() {
                 {p.label}
               </CommandItem>
             ))}
+            <CommandItem
+              value="keyboard shortcuts"
+              onSelect={() => {
+                setOpen(false);
+                window.dispatchEvent(new Event(SHORTCUTS_EVENT));
+              }}
+            >
+              <Keyboard aria-hidden />
+              Keyboard shortcuts
+              <CommandShortcut>?</CommandShortcut>
+            </CommandItem>
           </CommandGroup>
           {rows.length > 0 && (
             <CommandGroup heading="Projects">

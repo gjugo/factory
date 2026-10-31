@@ -5,6 +5,7 @@ import { links, parseAgentTab, parseCard, repoIdFrom } from './links';
 describe('links', () => {
   it('builds every page', () => {
     expect(links.overview()).toBe('/');
+    expect(links.overview('office-doctor')).toBe('/#office-doctor');
     expect(links.projects()).toBe('/projects');
     expect(links.addProject()).toBe('/projects?add=1');
     expect(links.board('acme/web')).toBe('/projects/acme/web');
