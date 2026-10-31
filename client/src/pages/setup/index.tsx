@@ -1,4 +1,4 @@
-import { Check, Factory, Loader2 } from 'lucide-react';
+import { Check, Dices, Factory, Loader2 } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '@/api';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { links } from '@/lib/links';
-import { SETUP_STEPS, setupBody, type SetupDraft } from '@/lib/setup';
+import { CEO_NAMES, COMPANY_NAMES, SETUP_STEPS, setupBody, suggestName, type SetupDraft } from '@/lib/setup';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/store';
 import { CEO_ID, type SwarmSettings } from '../../../../shared/types';
@@ -130,7 +130,10 @@ export default function SetupPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor={`${ids}-company`}>Company name</Label>
-                  <Input id={`${ids}-company`} value={draft.companyName} onChange={(e) => set({ companyName: e.target.value })} placeholder={settings.companyName || 'factory'} maxLength={60} autoComplete="organization" />
+                  <div className="flex gap-2">
+                    <Input id={`${ids}-company`} value={draft.companyName} onChange={(e) => set({ companyName: e.target.value })} placeholder={settings.companyName || 'factory'} maxLength={60} autoComplete="organization" />
+                    <SuggestButton onClick={() => set({ companyName: suggestName(COMPANY_NAMES, draft.companyName) })} />
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Change either any time in Settings.</p>
               </>
@@ -138,7 +141,10 @@ export default function SetupPage() {
             {step === 2 && (
               <div className="grid gap-2">
                 <Label htmlFor={`${ids}-ceo`}>CEO's name</Label>
-                <Input id={`${ids}-ceo`} value={draft.ceoName} onChange={(e) => set({ ceoName: e.target.value })} placeholder={ceo?.name ?? 'Morgan'} maxLength={40} />
+                <div className="flex gap-2">
+                  <Input id={`${ids}-ceo`} value={draft.ceoName} onChange={(e) => set({ ceoName: e.target.value })} placeholder={ceo?.name ?? 'Morgan'} maxLength={40} />
+                  <SuggestButton onClick={() => set({ ceoName: suggestName(CEO_NAMES, draft.ceoName || ceo?.name || '') })} />
+                </div>
               </div>
             )}
             {step === 3 && (
@@ -206,5 +212,13 @@ export default function SetupPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+function SuggestButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={onClick} aria-label="Suggest another name" title="Suggest another name">
+      <Dices aria-hidden />
+    </Button>
   );
 }
