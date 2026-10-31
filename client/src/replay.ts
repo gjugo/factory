@@ -76,9 +76,6 @@ function frameSnapshot(f: JournalFrame): WorldSnapshot {
     notifyChannels: s.notifyChannels,
     ticker: f.ticker ?? [],
     prPreviews: [], // previews are live-only: off while replaying
-    progress: s.progress,
-    pong: s.pong,
-    weather: s.weather,
     doctor: s.doctor, // the office doctor looks at the live office
     cloud: s.cloud,
     ops: f.ops ?? EMPTY_OPS, // a day from before mission control (or the demo's sample day) shows its numbers empty

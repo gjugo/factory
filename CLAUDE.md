@@ -46,8 +46,10 @@ screenshots in the PR.
 
 ## Code map
 
-Server (`server/`) and shared (`shared/`) are cubefarm's, kept as they are so upstream changes can be followed; the
-3D-only features (presence, ping-pong, decor and coins, weather, holiday themes, the dog) are still there, unused.
+Server (`server/`) and shared (`shared/`) started as cubefarm's. The 3D office's life (visitors and presence, ping-pong,
+coins, decorations and achievements, weather and world events, the dog, holiday themes) was removed (#24), so they now
+diverge from upstream: port cubefarm changes by hand. Agents' careers stay (`server/ledger.ts`, `shared/careers.ts`).
+An older state file's removed fields are dropped on load (`legacySettings` in `shared/journal.ts`, `loadLedger`).
 - `server/index.ts`: entry; the real or demo backend, REST under `/api`, the `/ws` and `/ws/term` websockets, serves `dist/`.
 - `server/config.ts`: `SWARM_PORT` (4517), `SWARM_HOST`, `SWARM_HOME` (`~/.factory`), `SWARM_PREVIEW_PORT` (6700), `--demo`.
 - `server/swarm.ts`: the orchestrator (projects, agents, scheduling, build → QA → fix → merge, the CEO's jobs,

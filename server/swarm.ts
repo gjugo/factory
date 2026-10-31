@@ -45,7 +45,7 @@ import { machineName, type MachineProvider } from './machines.ts';
 import { MACHINES_DIR, type DeskTrim } from './workspace.ts';
 import { envSecrets, Journal } from './journal.ts';
 import { sampleDay, seeded } from './journalSample.ts';
-import { addTenure, apply as applyLedger, buy as buyDecor, emptyLedger, grant as grantCoins, loadLedger, place as placeDecor, progressView, type CommandResult, type Effects, type LedgerEvent, type LedgerState } from './ledger.ts';
+import { apply as applyLedger, emptyLedger, loadLedger, type LedgerEvent, type LedgerState } from './ledger.ts';
 import { AgentTerminal } from './terminal.ts';
 import { Ticker } from './ticker.ts';
 import { Outbox } from './outbox.ts';
@@ -55,17 +55,12 @@ import { clip, plainText, stuckAgents } from './notify.ts';
 import { DEFAULT_NOTIFY, notifySettings, officeUrl } from '../shared/notify.ts';
 import { cloudSettings, DEFAULT_CLOUD } from '../shared/cloud.ts';
 import { agentActivity, lineActivity, sameActivity, type SeenActivity } from '../shared/activity.ts';
-import { WeatherService } from './weather.ts';
 import { blockers, holdUps, waitsMessage } from '../shared/issues.ts';
-import { dayKey, journalFrame, legacyAgent, legacyRequest } from '../shared/journal.ts';
+import { dayKey, journalFrame, legacyAgent, legacyRequest, legacySettings } from '../shared/journal.ts';
 import { cleanStyle, HAIR_COLORS, SKIN_TONES, type AgentStyle } from '../shared/looks.ts';
-import { achievementDef, type ProgressView } from '../shared/progress.ts';
-import { parsePongResult, PONG_PLAYER, recordGame } from '../shared/pong.ts';
 import { effectiveModel } from '../shared/models.ts';
-import { DEFAULT_WEATHER, DEFAULT_WORLD_EVENTS, weatherSettings, worldEventSettings } from '../shared/outside.ts';
-import { DEFAULT_THEME_SETTINGS, dueGreeting, themeSettings } from '../shared/themes.ts';
 import { DEFAULT_UI, UI_THEMES, uiSettings, type UiTheme } from '../shared/ui.ts';
-import { CEO_ID, DEFAULT_DOG_NAME, DEFAULT_MAX_AGENTS, FLOOR_SEATS, INSTALL_STEP } from '../shared/types.ts';
+import { CEO_ID, DEFAULT_MAX_AGENTS, FLOOR_SEATS, INSTALL_STEP } from '../shared/types.ts';
 import type {
   AgentActivity,
   AgentCli,
@@ -89,7 +84,6 @@ import type {
   OfficeUpdateView,
   OpsView,
   PhoneMessage,
-  PongRow,
   PreviewConfig,
   PreviewView,
   PrPreviewView,
@@ -222,8 +216,7 @@ interface Persisted {
   prLimits: number; // the PR budgets (PR_LIMITS_VERSION) needs-human records were judged by
   ops: OpsHistory; // mission control's rolling week of merges, QA verdicts, check runs and costs
   held: HeldIssue[];
-  progress: LedgerState; // coins, decorations, achievements and careers (ledger.ts)
-  pong: Record<string, PongRow[]>; // each floor's ping-pong leaderboard, by repo id
+  ledger: LedgerState; // agents' careers (ledger.ts); `progress` in state files from before #24
   officeId: string; // this office on a shared Upstash account: its Boxes carry it (docs/cloud.md)
 }
 
@@ -339,8 +332,6 @@ const MAX_ISSUE_FAILURES = 2;
 const MAX_QA_FAILURES = 2;
 // How long the office waits after Claude's usage limit is hit when Claude doesn't say when it resets.
 const LIMIT_PAUSE_MS = 15 * 60_000;
-// Everyone on a floor this size or bigger busy at once is a full house (an achievement).
-const FULL_HOUSE = 4;
 // Mission control's numbers are recomputed after these events (debounced), and every half minute for the clock's sake.
 const OPS_EVENTS = new Set<ServerEvent['type']>(['repo', 'repoRemoved', 'agent', 'agentRemoved', 'qa', 'qaRemoved', 'ceo']);
 const OPS_TICK_MS = 30_000;
@@ -501,7 +492,6 @@ export class Swarm {
       ceoHeartbeatMin: 60,
       managerName: '',
       companyName: '',
-      dogName: DEFAULT_DOG_NAME,
       projectsDir: DEFAULT_PROJECTS_DIR,
       setupDone: false,
       tutorialStep: 0,
@@ -509,9 +499,6 @@ export class Swarm {
       pacingSessions: DEFAULT_PACING_SESSIONS,
       trimIdleDesksMin: DEFAULT_TRIM_IDLE_MIN,
       voice: { ...DEFAULT_VOICE },
-      themes: DEFAULT_THEME_SETTINGS,
-      weather: { ...DEFAULT_WEATHER },
-      worldEvents: { ...DEFAULT_WORLD_EVENTS },
       listen: { ...DEFAULT_LISTEN },
       notify: notifySettings(DEFAULT_NOTIFY, {}),
       cloud: { ...DEFAULT_CLOUD },
@@ -527,8 +514,7 @@ export class Swarm {
     prLimits: PR_LIMITS_VERSION,
     ops: emptyHistory(),
     held: [],
-    progress: emptyLedger(),
-    pong: {},
+    ledger: emptyLedger(),
     officeId: officeId(),
   };
   /**
@@ -595,8 +581,6 @@ export class Swarm {
   private clis: CliView[] = []; // coding-agent CLIs found on this machine (detected at startup)
   /** Phone messages read aloud. The demo keeps its own key and clips, so it never touches the real ones. */
   readonly voice: Voice;
-  /** The real local weather (Settings → Weather), read by the server so it's cached and survives a restart. */
-  readonly weather: WeatherService;
   /** What the office looked like over the last week, for the time-lapse replay. The demo keeps its own. */
   readonly journal: Journal;
   private readonly envSecrets = envSecrets(process.env);
@@ -611,13 +595,6 @@ export class Swarm {
   private toldStuck = new Set<string>(); // `${agentId}:${endedAt}`: agents in an error the manager was notified about
 
   constructor(private backend: Backend) {
-    this.weather = new WeatherService({
-      api: backend.weather,
-      file: path.join(HOME_DIR, backend.demo ? 'demo-weather.json' : 'weather.json'),
-      settings: () => this.state.settings.weather,
-      changed: (weather) => this.broadcast({ type: 'weather', weather }),
-      log: (line) => console.log(line),
-    });
     this.voice = new Voice({
       api: backend.voice,
       secretsFile: path.join(HOME_DIR, backend.demo ? 'demo-secrets.json' : 'secrets.json'),
@@ -685,7 +662,7 @@ export class Swarm {
       const raw = await fs.readFile(STATE_FILE, 'utf8');
       const loaded = JSON.parse(raw) as Partial<Persisted>;
       this.state = {
-        settings: { ...this.state.settings, ...loaded.settings },
+        settings: { ...this.state.settings, ...legacySettings(loaded.settings) },
         repos: (loaded.repos ?? []).map((r) => ({
           ...r,
           autoMerge: r.autoMerge ?? true,
@@ -735,8 +712,7 @@ export class Swarm {
         prLimits: loaded.prLimits ?? 1,
         ops: loadHistory(loaded.ops, Date.now()),
         held: loaded.held ?? [],
-        progress: loadLedger(loaded.progress),
-        pong: loaded.pong && typeof loaded.pong === 'object' ? loaded.pong : {},
+        ledger: loadLedger(loaded.ledger ?? (loaded as { progress?: unknown }).progress),
         officeId: typeof loaded.officeId === 'string' && /^[a-z0-9]{6}$/.test(loaded.officeId) ? loaded.officeId : this.state.officeId,
       };
       for (const m of this.state.messages) this.messageSeq = Math.max(this.messageSeq, m.id + 1);
@@ -765,9 +741,6 @@ export class Swarm {
       if (this.state.settings.scaling !== 'auto') this.state.settings.scaling = 'approve';
       this.state.settings.maxAgents = clampMaxAgents(this.state.settings.maxAgents);
       this.state.settings.voice = voiceSettings(DEFAULT_VOICE, loaded.settings?.voice);
-      this.state.settings.themes = themeSettings(DEFAULT_THEME_SETTINGS, loaded.settings?.themes);
-      this.state.settings.weather = weatherSettings(DEFAULT_WEATHER, loaded.settings?.weather);
-      this.state.settings.worldEvents = worldEventSettings(DEFAULT_WORLD_EVENTS, loaded.settings?.worldEvents);
       this.state.settings.listen = listenSettings(DEFAULT_LISTEN, loaded.settings?.listen);
       this.state.settings.notify = notifySettings(DEFAULT_NOTIFY, loaded.settings?.notify);
       this.state.settings.cloud = cloudSettings(DEFAULT_CLOUD, loaded.settings?.cloud);
@@ -780,7 +753,6 @@ export class Swarm {
       // first run
     }
     await this.voice.init();
-    await this.weather.init();
     await this.notifier.init();
     await this.cloud.init();
     if (this.state.settings.cloud.machineKind === 'box' && !this.cloud.boxApi()) this.state.settings.cloud.machineKind = 'local';
@@ -854,7 +826,7 @@ export class Swarm {
     for (const r of this.state.repos) this.ensureAgent(r);
     this.ensureCeo(interrupted);
     // Agents from before the ledger start their careers now.
-    for (const a of this.state.agents) if (a.role !== 'ceo') applyLedger(this.state.progress, { kind: 'hired', agentId: a.id, at: Date.now() });
+    for (const a of this.state.agents) if (a.role !== 'ceo') applyLedger(this.state.ledger, { kind: 'hired', agentId: a.id, at: Date.now() });
 
     for (const r of this.state.repos) void this.cloneRepo(r.id);
     await Promise.all(this.state.repos.map((r) => this.syncRepo(r.id)));
@@ -892,8 +864,6 @@ export class Swarm {
       void this.sweepMachines();
     }, DESK_SWEEP_INTERVAL_MS);
     void this.sweepMachines();
-    setInterval(() => this.greet(), 60_000);
-    setTimeout(() => this.greet(), 5000);
     setInterval(() => this.emitOps(), OPS_TICK_MS); // the clock moves the numbers too: the last hour, today, errors turning into alarms
     setInterval(() => this.notifyStuck(), 60_000);
     setInterval(() => this.watchdogTick(), WATCHDOG_MS);
@@ -1090,7 +1060,7 @@ export class Swarm {
       hasScreenshot: !!rt.screenshot,
       screenshotAt: rt.screenshot?.at ?? null,
       lastError: a.lastError,
-      career: a.role === 'ceo' ? null : (this.state.progress.careers[a.id] ?? null),
+      career: a.role === 'ceo' ? null : (this.state.ledger.careers[a.id] ?? null),
       log: withLog ? rt.log : [],
       activity: this.activityOf(a),
     };
@@ -1145,15 +1115,12 @@ export class Swarm {
       clis: this.clis,
       ...this.voice.keyView(),
       voiceCache: this.voice.cacheInfo(),
-      weather: this.weather.current(),
       ticker: this.ticker.recent(),
       notifyChannels: this.notifier.channelsView(),
       cloud: this.cloud.view(),
       version: VERSION,
       officeCommit: this.officeHead?.slice(0, 7) ?? null,
       officeUpdate: this.officeHead ? this.officeUpdateView() : undefined,
-      progress: this.progressView(),
-      pong: this.state.pong,
     };
   }
 
@@ -1247,7 +1214,6 @@ export class Swarm {
     Object.assign(rec, patch, { updatedAt: Date.now() });
     if (!this.state.qa.includes(rec)) return; // it left QA (its PR closed) while a session on it was still wrapping up
     if (rec.status !== 'needs-human') rec.escalated = false;
-    else this.ledger({ kind: 'needs-human', repoId: rec.repoId, pr: rec.prNumber });
     this.broadcast({ type: 'qa', qa: this.qaView(rec) });
     this.save();
     // Every way a PR reaches the manager (escalated by the CEO, or straight to them) passes here.
@@ -1515,7 +1481,6 @@ export class Swarm {
     }
     this.state.qa = this.state.qa.filter((q) => q.repoId !== id);
     this.state.held = this.state.held.filter((h) => h.repoId !== id);
-    delete this.state.pong[id];
     for (const r of this.state.repos) r.links = r.links.filter((l) => l !== id);
     this.repoRt.delete(id);
     // Keep floors contiguous.
@@ -1887,10 +1852,10 @@ export class Swarm {
   private ledgerPulls(repo: PersistedRepo, pulls: PullInfo[]) {
     const now = Date.now();
     for (const pr of pulls) {
-      if (pr.state === 'OPEN') this.ledger({ kind: 'pr-open', repoId: repo.id, pr: pr.number, title: pr.title, author: this.prAuthor(repo, pr), checks: pr.checks, at: now });
+      if (pr.state === 'OPEN') this.ledger({ kind: 'pr-open', repoId: repo.id, pr: pr.number, title: pr.title, author: this.prAuthor(repo, pr), at: now });
       else if (pr.state === 'MERGED') {
         const at = pr.mergedAt ? Date.parse(pr.mergedAt) : now;
-        this.ledger({ kind: 'merged', repoId: repo.id, repoName: repo.fullName, pr: pr.number, title: pr.title, author: this.prAuthor(repo, pr), at: Number.isFinite(at) ? Math.min(at, now) : now });
+        this.ledger({ kind: 'merged', repoId: repo.id, pr: pr.number, title: pr.title, author: this.prAuthor(repo, pr), at: Number.isFinite(at) ? Math.min(at, now) : now });
       }
     }
     this.ledger({ kind: 'listed', repoId: repo.id, numbers: pulls.map((p) => p.number), at: now });
@@ -2188,7 +2153,7 @@ export class Swarm {
       logTail: [],
     };
     this.state.agents.push(agent);
-    applyLedger(this.state.progress, { kind: 'hired', agentId: agent.id, at: Date.now() });
+    applyLedger(this.state.ledger, { kind: 'hired', agentId: agent.id, at: Date.now() });
     this.agentRt.set(agent.id, { log: [], session: null, currentTool: null, browserUrl: null, screenshot: null, shots: [], terminal: null });
     this.appendLog(agent, [{ kind: 'system', text: `👋 ${name} joined floor ${repo.floor} (${repo.fullName})${host === 'box' ? ', working in the cloud' : ''}.` }]);
     this.save();
@@ -2579,7 +2544,7 @@ export class Swarm {
         .then(() => this.sweepFloor(repo.id));
     }
     this.state.agents = this.state.agents.filter((x) => x.id !== id);
-    applyLedger(this.state.progress, { kind: 'let-go', agentId: id });
+    applyLedger(this.state.ledger, { kind: 'let-go', agentId: id });
     this.agentRt.delete(id);
     this.seenActivity.delete(id);
     this.shownActivity.delete(id);
@@ -3720,7 +3685,6 @@ export class Swarm {
     if (patch.ceoHeartbeatMin !== undefined) s.ceoHeartbeatMin = Math.max(0, Math.min(1440, Math.round(Number(patch.ceoHeartbeatMin)) || 0));
     if (typeof patch.managerName === 'string') s.managerName = patch.managerName.trim().slice(0, 40);
     if (typeof patch.companyName === 'string') s.companyName = patch.companyName.trim().slice(0, 60);
-    if (typeof patch.dogName === 'string') s.dogName = patch.dogName.trim().slice(0, 24) || DEFAULT_DOG_NAME;
     if (typeof patch.projectsDir === 'string' && patch.projectsDir.trim()) s.projectsDir = path.resolve(patch.projectsDir.trim());
     if (typeof patch.setupDone === 'boolean') s.setupDone = patch.setupDone;
     if (patch.tutorialStep !== undefined) s.tutorialStep = Math.max(-1, Math.round(Number(patch.tutorialStep)) || 0);
@@ -3735,15 +3699,6 @@ export class Swarm {
       s.voice = voiceSettings(s.voice, patch.voice);
       if (s.voice.keepDays !== keepDays) setTimeout(() => void this.voice.prune(), 500);
     }
-    if (patch.themes !== undefined) {
-      s.themes = themeSettings(s.themes, patch.themes);
-      setTimeout(() => this.greet(), 1000);
-    }
-    if (patch.weather !== undefined) {
-      s.weather = weatherSettings(s.weather, patch.weather);
-      this.weather.settingsChanged();
-    }
-    if (patch.worldEvents !== undefined) s.worldEvents = worldEventSettings(s.worldEvents, patch.worldEvents);
     if (patch.listen !== undefined) s.listen = listenSettings(s.listen, patch.listen);
     if (patch.notify !== undefined) {
       const url = (patch.notify as { officeUrl?: unknown } | null)?.officeUrl;
@@ -4034,7 +3989,6 @@ export class Swarm {
    */
   private schedule() {
     this.tickUsage();
-    this.progressTick();
     if (this.officeUpdateTick()) return; // draining for the office's own update
     this.applyTeamChanges(); // before handing out work, so agents on their way out get none
     if (this.limited()) return;
@@ -4936,34 +4890,19 @@ export class Swarm {
     return restartMessage(restart.counts) ?? 'Restarted: nothing to do.';
   }
 
-  // ---------- progress: coins, decorations, achievements and careers (#210, #226) ----------
+  // ---------- careers (#226) ----------
 
   /** Tell the ledger something happened; send on whatever it changed. emitAgents false: the caller emits them. */
   private ledger(ev: LedgerEvent, emitAgents = true) {
-    this.fanout(applyLedger(this.state.progress, ev), emitAgents);
-  }
-
-  private fanout(fx: Effects, emitAgents = true) {
+    const fx = applyLedger(this.state.ledger, ev);
     if (!fx.changed) return;
-    if (fx.reward) this.broadcast({ type: 'reward', reward: fx.reward });
     if (emitAgents) {
       for (const id of fx.careers) {
         const a = this.state.agents.find((x) => x.id === id);
         if (a) this.emitAgent(a);
       }
     }
-    for (const u of fx.unlocked) {
-      const def = achievementDef(u.id);
-      if (!def) continue;
-      this.postMessage('office', `🏆 Achievement unlocked: ${def.icon} ${def.name}. ${def.blurb} (${u.detail}). Its trophy is on the lobby's shelf.`);
-      this.toast('success', `🏆 Achievement unlocked: ${def.icon} ${def.name}`);
-    }
-    if (fx.progress) this.broadcast({ type: 'progress', progress: this.progressView() });
     this.save();
-  }
-
-  private progressView(): ProgressView {
-    return progressView(this.state.progress, this.state.repos.map((r) => r.id));
   }
 
   /** Who wrote a PR, as far as the office knows: its QA record's author, the one holding it, or the one its branch is named after. */
@@ -4975,55 +4914,6 @@ export class Swarm {
     if (holder) return holder.id;
     const m = /^swarm\/issue-\d+-(.+)$/i.exec(pr.headRefName);
     return m ? (devs.find((a) => slugify(a.name) === m[1].toLowerCase())?.id ?? null) : null;
-  }
-
-  /** The scheduler's beat: a new day for the ledger, and a full house when everyone on a floor is busy at once. */
-  private progressTick() {
-    const now = Date.now();
-    this.ledger({ kind: 'tick', at: now });
-    for (const r of this.state.repos) {
-      const team = this.state.agents.filter((a) => a.repoId === r.id);
-      if (team.length >= FULL_HOUSE && team.every((a) => BUSY.includes(a.status))) this.ledger({ kind: 'full-house', repoName: r.fullName, people: team.length, at: now });
-    }
-  }
-
-  private command(r: CommandResult): ProgressView {
-    if ('error' in r) throw new HttpError(409, r.error);
-    this.fanout(r.effects);
-    return this.progressView();
-  }
-
-  /** The lobby kiosk's Buy: a decoration for a floor, paid with its coins. It waits in the floor's decor box. */
-  buyDecoration(repoId: string, item: unknown): ProgressView {
-    return this.command(buyDecor(this.state.progress, this.repo(repoId).id, item));
-  }
-
-  /** Put a decoration in one of a floor's slots, move it to another, or (slot null) back in the floor's decor box. */
-  placeDecoration(repoId: string, body: { item?: unknown; slot?: unknown; from?: unknown }): ProgressView {
-    const repo = this.repo(repoId);
-    const spot = (v: unknown) => (v === null || v === undefined ? null : typeof v === 'string' ? v : undefined);
-    const slot = spot(body.slot);
-    const from = spot(body.from);
-    if (slot === undefined || from === undefined) throw new HttpError(400, 'slot and from are decoration spots (or null)');
-    return this.command(placeDecor(this.state.progress, repo.id, repo.fullName, { item: body.item, slot, from }, Date.now()));
-  }
-
-  /** The player finished a coffee; `id` is the browser's own for it, so a retried report counts once. */
-  drankCoffee(id: unknown) {
-    if (typeof id !== 'string' || !/^[\w-]{4,80}$/.test(id)) throw new HttpError(400, 'A coffee needs an id');
-    this.ledger({ kind: 'coffee', id, at: Date.now() });
-    return { coffees: this.state.progress.coffees };
-  }
-
-  /** Demo only, for QA: coins for a floor (`coins`), or more time on the team (`tenure`, everyone without an agent id). */
-  demoProgress(body: { action?: unknown; repoId?: unknown; coins?: unknown; agentId?: unknown; days?: unknown }): ProgressView {
-    if (!this.backend.demo) throw new HttpError(403, 'Only the demo office hands out coins and tenure');
-    if (body.action === 'coins') return this.command(grantCoins(this.state.progress, this.repo(String(body.repoId ?? '')).id, Number(body.coins)));
-    if (body.action === 'tenure') {
-      const agentId = typeof body.agentId === 'string' && body.agentId ? this.agent(body.agentId).id : undefined;
-      return this.command(addTenure(this.state.progress, Number(body.days), agentId));
-    }
-    throw new HttpError(400, 'action is "coins" or "tenure"');
   }
 
   // ---------- the phone ----------
@@ -5039,12 +4929,6 @@ export class Swarm {
     // Proposals are notified as such (proposeHire, proposeLetGo).
     if (from === 'ceo' && !requestId) this.notifier.notify('ceoMessage', this.ceo().name, plainText(m.text), `${this.ceo().name}: ${plainText(m.text, 100)}`);
     return m;
-  }
-
-  /** The team's holiday greeting (shared/themes.ts) from the CEO, once a day while a theme is on. */
-  private greet() {
-    const text = dueGreeting(new Date(), this.state.settings.themes, this.state.settings.managerName || this.user || '', this.state.messages);
-    if (text) this.postMessage('ceo', text);
   }
 
   // ---------- notifications ----------
@@ -5079,29 +4963,6 @@ export class Swarm {
     this.state.phoneReadAt = t;
     this.broadcast({ type: 'phoneRead', at: t });
     this.save();
-  }
-
-  // ---------- ping-pong ----------
-
-  /**
-   * A ping-pong game finished on `repoId`'s floor (the client plays it): onto that floor's leaderboard it goes.
-   * `players` are 'player' (the manager) or agents on the floor, `score` their points in the same order.
-   */
-  recordPong(repoId: string, body: unknown) {
-    this.repo(repoId);
-    const game = parsePongResult(body);
-    if ('error' in game) throw new HttpError(400, game.error);
-    const [a, b] = game.players.map((id) => {
-      if (id === PONG_PLAYER) return { id, name: this.state.settings.managerName.trim() || 'Manager' };
-      const agent = this.state.agents.find((x) => x.id === id && x.repoId === repoId);
-      if (!agent) throw new HttpError(400, `${id} doesn't work on this floor`);
-      return { id, name: agent.name };
-    });
-    const board = recordGame(this.state.pong[repoId] ?? [], { players: [a, b], score: game.score, at: Date.now() });
-    this.state.pong[repoId] = board;
-    this.broadcast({ type: 'pong', repoId, board });
-    this.save();
-    return board;
   }
 
   // ---------- team changes ----------

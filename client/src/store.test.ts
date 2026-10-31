@@ -43,6 +43,14 @@ describe('apply: projects', () => {
     apply({ type: 'repoRemoved', repoId: 'acme/floor1' });
     expect(useStore.getState().repos.map((r) => r.id)).toEqual(['acme/floor2']);
   });
+
+  it('skips the 3D office life events an older office or recording still sends', () => {
+    const { apply } = useStore.getState();
+    apply(snapshot([{ ...repo(1), fullName: 'acme/floor1' }]));
+    const before = useStore.getState();
+    for (const type of ['pong', 'progress', 'reward', 'weather', 'visitors', 'visitorPose', 'visitorEmote', 'visitorPing']) apply({ type, repoId: 'acme/floor1' } as never);
+    expect(useStore.getState()).toBe(before);
+  });
 });
 
 describe('apply: toasts', () => {
