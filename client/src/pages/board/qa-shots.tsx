@@ -23,7 +23,7 @@ export function QaShots({ repoId, pr, shots, version }: { repoId: string; pr: nu
               className="group block w-full overflow-hidden rounded-md border bg-muted text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <img src={url(i)} alt={s.caption || `Screenshot ${i + 1}`} loading="lazy" className="aspect-video w-full object-cover object-top transition-opacity group-hover:opacity-90" />
-              <span className="block truncate px-2 py-1 text-xs text-muted-foreground">{s.caption || s.page || `Screenshot ${i + 1}`}</span>
+              <span className="block truncate bg-card px-2 py-1 text-xs text-foreground">{s.caption || s.page || `Screenshot ${i + 1}`}</span>
             </button>
           </li>
         ))}

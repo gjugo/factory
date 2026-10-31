@@ -64,14 +64,15 @@ export function CardSheet({ repo, target, found, agents, onClose, onCloseAutoFoc
 
 /** A ?card= that isn't on the board: a PR closed without merging points to its issues, back in the backlog. */
 function Gone({ repo, target, label }: { repo: RepoView; target: BoardCard | null; label: string }) {
-  const closed = target?.kind === 'pr' ? repo.pulls.find((p) => p.number === target.number && p.state === 'CLOSED') : undefined;
+  // Closed PRs leave repo.pulls; the issue they closed waits as held, which remembers the PR.
+  const held = target?.kind === 'pr' ? (repo.held ?? []).filter((h) => h.pr === target.number).map((h) => h.issue) : [];
   return (
     <SheetHeader>
       <SheetTitle>{label}</SheetTitle>
-      <SheetDescription>{closed ? 'It was closed without merging.' : "That card isn't on the board: it may be closed, or the office hasn't synced it yet."}</SheetDescription>
-      {closed && closed.closesIssues.length > 0 && (
+      <SheetDescription>{held.length ? 'It was closed without merging.' : "That card isn't on the board: it may be closed, or the office hasn't synced it yet."}</SheetDescription>
+      {held.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
-          {closed.closesIssues.map((n) => (
+          {held.map((n) => (
             <Button key={n} variant="outline" size="sm" asChild>
               <Link to={links.board(repo.id, { kind: 'issue', number: n })}>Open issue #{n}</Link>
             </Button>
@@ -99,6 +100,8 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
   const open = new Set(repo.issues.map((i) => i.number));
   const waiters = issue ? repo.issues.filter((i) => blockers(i.body, open).includes(issue.number)).map((i) => i.number) : [];
   const isPr = card.prNumber != null;
+  // A merged PR that never went through the office's QA has nothing to say there.
+  const showQa = isPr && (!!card.qa || column !== 'merged');
   const backlog = column === 'backlog' && issue ? backlogState(issue, repo).state : undefined;
   const note = shownNote(card, column, backlog);
   const columnTitle = COLUMNS.find((c) => c.key === column)?.title ?? '';
@@ -143,7 +146,7 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
       </div>
       <Separator />
 
-      {isPr && <QaSection repo={repo} card={card} qa={card.qa} />}
+      {showQa && <QaSection repo={repo} card={card} qa={card.qa} />}
       {pull && column !== 'merged' && (
         <>
           <Separator />
@@ -152,7 +155,7 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
       )}
       {(issue || !isPr) && (
         <>
-          {isPr && <Separator />}
+          {showQa && <Separator />}
           <Section title={isPr && issue ? `Closes #${issue.number}: ${issue.title}` : 'Description'}>
             {issue?.body?.trim() ? <Markdown text={issue.body} /> : <p className="text-sm text-muted-foreground">{issue ? 'The issue has no description.' : 'The issue is no longer open.'}</p>}
           </Section>
