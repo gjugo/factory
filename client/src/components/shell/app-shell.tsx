@@ -13,10 +13,12 @@ import { useStore } from '@/store';
 import { AppSidebar } from './app-sidebar';
 import { Banners } from './banners';
 import { ReplayBar } from './replay-bar';
+import { Shortcuts } from './shortcuts';
 import { TopBar } from './top-bar';
 
 // Every page sits in this frame: the sidebar, the top bar, the banners, the time-lapse's bar while it plays, and what's
-// shared (⌘K, the CEO sheet, toasts, confirmations). It also points the tab's watch at the route's project.
+// shared (⌘K, the keyboard shortcuts, the CEO sheet, toasts, confirmations). It also points the tab's watch at the
+// route's project.
 
 export function AppShell() {
   useApplyTheme();
@@ -55,6 +57,7 @@ export function AppShell() {
           <ReplayBar />
         </SidebarInset>
         <ConfirmDialog />
+        <Shortcuts />
         <Toaster position="bottom-right" closeButton />
       </SidebarProvider>
     </TooltipProvider>
