@@ -13,9 +13,13 @@ import { EMPTY_OPS } from './ops';
 import { needsManager, qaCardNote, type CardTone } from './qaCard';
 import { countWatch } from './watch';
 import { markdownToPlainText } from './lib/plain-text';
+import { audioUnlocked } from './voice/audio';
+import { claimVoice } from './voice/claim';
+import { speakable } from './voice/voiceQueue';
 
 // The office as this tab knows it: the server's snapshot, then every ServerEvent folded in by apply(). cubefarm's
-// store without the 3D world: no floors to walk, sounds, voice or presence poses, only state the pages read.
+// store without the 3D world: no floors to walk, sounds or presence poses, only state the pages read. CEO messages
+// are read aloud from here (voice/speaker.ts, loaded on the first one).
 
 export type Agent = Omit<AgentView, 'log'>;
 
@@ -51,6 +55,7 @@ interface State {
   voiceKeySet: boolean; // an ElevenLabs key is saved on the server
   voiceKeyHint: string; // its last 4 characters
   voiceCache: VoiceCacheView;
+  voiceSpeaking: number | null; // the message being read aloud in this tab (voice/speaker.ts)
   progress: ProgressView;
   weather: WeatherView;
   ticker: TickerItem[]; // the projects' recent activity lines, oldest first
@@ -140,6 +145,7 @@ export const useStore = create<State>((set, get) => ({
   voiceKeySet: false,
   voiceKeyHint: '',
   voiceCache: { clips: 0, bytes: 0, saved: [] },
+  voiceSpeaking: null,
   progress: { floors: {}, achievements: [], coffees: 0, merges: 0 },
   weather: EMPTY_WEATHER_VIEW,
   ticker: [],
@@ -308,6 +314,12 @@ export const useStore = create<State>((set, get) => ({
         break;
       case 'message': {
         set({ messages: [...get().messages.slice(-199), ev.message] });
+        // Read aloud, in this tab or another (claim.ts); a tab nobody has clicked in yet can't make sound.
+        if (live && audioUnlocked() && speakable(ev.message, get().settings.voice, Date.now())) {
+          const arrived = Date.now();
+          const wait = claimVoice(ev.message.id);
+          void import('./voice/speaker').then((v) => v.speakMessage(ev.message, arrived, wait));
+        }
         if (live && ev.message.from === 'ceo' && !get().ceoOpen && !get().chatViews) {
           const ceo = get().agents[CEO_ID]?.name ?? 'CEO';
           const text = markdownToPlainText(ev.message.text);
