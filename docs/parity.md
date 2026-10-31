@@ -12,8 +12,8 @@ Status:
 - ✅ fixed: missing before, added in this PR
 - ❌ missing: not in factory yet; the bigger ones have a short spec under [Missing: needs its own issue](#missing-needs-its-own-issue)
 - — dropped: on purpose. These are 3D-only things (walking, camera, the building, sounds) and office life (presence,
-  ping-pong, coins/decor/achievements, weather/world events, the dog, holiday themes). #24 removes the office-life
-  features from the server.
+  ping-pong, coins/decor/achievements, weather/world events, the dog, holiday themes). #24 removed the office-life
+  features from the server; agents' careers stay.
 
 Where a cubefarm panel has its own empty or error state, factory's matching page has one too. Those are listed only
 where they differ.
