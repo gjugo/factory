@@ -18,6 +18,7 @@ import { useTheme } from '@/lib/theme';
 import { useStore } from '@/store';
 import { modelSuggestions } from '../../../../shared/models';
 import { UI_THEMES, type UiTheme } from '../../../../shared/ui';
+import { CloudAgentsCard } from './cloud-agents';
 import { EnvironmentCard, OfficeUpdateCard } from './office-info';
 
 const THEME_LABEL: Record<UiTheme, string> = { light: 'Light', dark: 'Dark', system: 'System' };
@@ -28,7 +29,10 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" description="How the office runs. Saved in the office, for every browser." />
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <OfficeSettingsCards />
+        <div className="grid min-w-0 content-start gap-6">
+          <OfficeSettingsCards />
+          <CloudAgentsCard />
+        </div>
         <div className="grid min-w-0 content-start gap-6">
           <AppearanceCard />
           <OfficeUpdateCard />

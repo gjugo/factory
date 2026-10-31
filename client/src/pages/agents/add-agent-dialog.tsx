@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UserPlus } from 'lucide-react';
-import type { RepoView } from '../../../../shared/types';
-import { CliField, EffortField, ModelField, type SetupValues } from '@/components/agents/agent-fields';
+import type { MachineHost, RepoView } from '../../../../shared/types';
+import { CliField, EffortField, HostField, ModelField, type SetupValues } from '@/components/agents/agent-fields';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,8 @@ import { workerCli } from '@/lib/agents';
 import { useStore } from '@/store';
 
 // Add agent: a new agent on a project, with a name (or one picked for them) and their coding agent, model and effort
-// (empty: the office's defaults). The office refuses past Settings → Most agents per project, so the button does too.
+// (empty: the office's defaults), and where they work once the cloud is set up (docs/cloud.md). The office refuses
+// past Settings → Most agents per project, so the button does too.
 
 const EMPTY: SetupValues = { cli: '', model: '', effort: '' };
 
@@ -23,6 +24,8 @@ export function AddAgentButton({ repo, teamSize }: { repo: RepoView; teamSize: n
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [setup, setSetup] = useState<SetupValues>(EMPTY);
+  const [host, setHost] = useState<MachineHost | ''>('');
+  const cloudOn = useStore((s) => s.cloud.keySet);
   const [busy, setBusy] = useState(false);
   const full = teamSize >= max;
   const terminal = settings.runtime === 'terminal';
@@ -31,11 +34,12 @@ export function AddAgentButton({ repo, teamSize }: { repo: RepoView; teamSize: n
     e.preventDefault();
     setBusy(true);
     try {
-      const hired = await api.hireAgent(repo.id, { name: name.trim() || undefined, ...setup, cli: terminal ? setup.cli : '' });
+      const hired = await api.hireAgent(repo.id, { name: name.trim() || undefined, ...setup, cli: terminal ? setup.cli : '', ...(cloudOn ? { host } : {}) });
       useStore.getState().pushToast('success', `${hired.name} joined ${projectName(repo)}.`);
       setOpen(false);
       setName('');
       setSetup(EMPTY);
+      setHost('');
     } catch {
       // api() already toasted why
     } finally {
@@ -75,6 +79,7 @@ export function AddAgentButton({ repo, teamSize }: { repo: RepoView; teamSize: n
             <Input id="add-agent-name" value={name} maxLength={24} placeholder="Picked for you" onChange={(e) => setName(e.target.value)} autoComplete="off" />
           </div>
           {terminal && <CliField value={setup.cli} onChange={(cli) => setSetup({ ...setup, cli })} />}
+          {cloudOn && <HostField value={host} office onChange={setHost} cli={workerCli({ cli: setup.cli, role: 'agent' }, settings)} />}
           <ModelField value={setup.model} cli={workerCli({ cli: setup.cli, role: 'agent' }, settings)} onChange={(model) => setSetup({ ...setup, model })} />
           <EffortField value={setup.effort} onChange={(effort) => setSetup({ ...setup, effort })} />
           <DialogFooter>
