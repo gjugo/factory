@@ -5,6 +5,16 @@ import type { AgentLook, SwarmSettings } from '../../../shared/types';
 
 export const SETUP_STEPS = ['Welcome', 'You', 'Your CEO', 'Team changes', 'Ready'] as const;
 
+/** Names the 🎲 buttons suggest, cubefarm's own. */
+export const COMPANY_NAMES = ['Pixel & Pine', 'Byte Bakery', 'Night Owl Software', 'Tiny Rocket Co.', 'Moonbeam Works', 'Happy Path Inc.', 'Merge Conflict Ltd.', 'Quokka Labs', 'Blue Kettle Studio', 'Paper Plane Software'];
+export const CEO_NAMES = ['Morgan', 'Avery', 'Jordan', 'Riley', 'Quinn', 'Harper', 'Rowan', 'Sasha', 'Casey', 'Jamie', 'Alex', 'Robin'];
+
+/** Another name from the list than the one showing, so every press changes it. */
+export function suggestName(list: readonly string[], current: string, random = Math.random): string {
+  const rest = list.filter((x) => x !== current.trim());
+  return rest[Math.floor(random() * rest.length)] ?? list[0];
+}
+
 export interface SetupDraft {
   managerName: string;
   companyName: string;

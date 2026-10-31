@@ -1,8 +1,15 @@
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { PREVIEW_PORT, STATE_FILE } from './config.ts';
-import { createDemoBackend } from './demo.ts';
-import { Swarm } from './swarm.ts';
+
+// These tests write and read back a whole state file: a home of their own, so test files running beside them can't
+// overwrite it in between.
+process.env.SWARM_HOME = fsSync.mkdtempSync(path.join(os.tmpdir(), 'factory-legacy-'));
+const { PREVIEW_PORT, STATE_FILE } = await import('./config.ts');
+const { createDemoBackend } = await import('./demo.ts');
+const { Swarm } = await import('./swarm.ts');
 
 type Internals = { writeState(): Promise<void> };
 const readState = async () => JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -42,7 +49,7 @@ describe('a state file from before the office life was removed', () => {
 
     const again = new Swarm(createDemoBackend());
     await again.init();
-    const snap = again.snapshot() as unknown as Record<string, unknown> & ReturnType<Swarm['snapshot']>;
+    const snap = again.snapshot() as unknown as Record<string, unknown> & ReturnType<InstanceType<typeof Swarm>['snapshot']>;
     expect(snap.repos.map((r) => r.id)).toEqual(old.repos.map((r: { id: string }) => r.id));
     for (const a of old.agents) expect(snap.agents.map((x) => x.id)).toContain(a.id); // and the CEO, who starts at boot
     expect(snap.agents.find((a) => a.id === agent.id)?.career).toMatchObject({ merged: 5, reviews: 2 });

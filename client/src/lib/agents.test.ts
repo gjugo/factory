@@ -16,6 +16,8 @@ import {
   parseGridIds,
   parseStatusFilter,
   presentIds,
+  renameTo,
+  sessionsLabel,
   signInFor,
   taskInfo,
   toggleGridPick,
@@ -198,5 +200,30 @@ describe('assignChoices', () => {
     } as unknown as KanbanColumns;
     expect(assignChoices(cols).map((c) => `${c.kind}${c.number}`)).toEqual(['issue1', 'qa2', 'qa4']);
     expect(assignChoices(null)).toEqual([]);
+  });
+});
+
+describe('renameTo', () => {
+  it('asks for a trimmed new name', () => {
+    expect(renameTo('  Ada  ', 'Ken')).toBe('Ada');
+  });
+  it('changes nothing for a blank or unchanged name', () => {
+    expect(renameTo('   ', 'Ken')).toBeNull();
+    expect(renameTo(' Ken ', 'Ken')).toBeNull();
+  });
+  it('keeps the 24 characters the office keeps', () => {
+    expect(renameTo('A'.repeat(30), 'Ken')).toBe('A'.repeat(24));
+  });
+});
+
+describe('sessionsLabel', () => {
+  const agents = { a: { status: 'working' as const }, b: { status: 'preparing' as const }, c: { status: 'idle' as const }, ceo: { status: 'done' as const } };
+  it('counts working and preparing sessions against the limit', () => {
+    expect(sessionsLabel(agents, 8)).toBe('2/8 sessions');
+  });
+  it('shows the count alone with no limit', () => {
+    expect(sessionsLabel(agents, 0)).toBe('2 sessions');
+    expect(sessionsLabel({ a: { status: 'working' } }, 0)).toBe('1 session');
+    expect(sessionsLabel({}, 0)).toBe('0 sessions');
   });
 });

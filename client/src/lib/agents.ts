@@ -28,6 +28,12 @@ export function modelLabel(a: Pick<Agent, 'cli' | 'role' | 'model'>, settings: R
   return effectiveModel(a.model, workerCli(a, settings), settings, CLAUDE_MODELS[0]) || 'default model';
 }
 
+/** The new name a rename field asks for, or null when it changes nothing (the office ignores a blank name, and keeps 24 characters). */
+export function renameTo(input: string, current: string): string | null {
+  const name = input.trim().slice(0, 24);
+  return name && name !== current ? name : null;
+}
+
 export const EFFORTS: EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 export const effortLabel = (a: Pick<Agent, 'effort'>, settings: Pick<SwarmSettings, 'defaultEffort'>) => a.effort || settings.defaultEffort;
@@ -100,6 +106,12 @@ export function activityLabel(a: Pick<Agent, 'status' | 'activity' | 'currentToo
 }
 
 export const isBusyStatus = (s: AgentStatus) => s === 'preparing' || s === 'working';
+
+/** Sessions running now (the CEO's included), against the session limit when there is one: "3/8 sessions". */
+export function sessionsLabel(agents: Record<string, Pick<Agent, 'status'>>, limit: number): string {
+  const running = Object.values(agents).filter((a) => isBusyStatus(a.status)).length;
+  return `${limit ? `${running}/${limit}` : running} session${!limit && running === 1 ? '' : 's'}`;
+}
 
 /** How long their session has run ("4m 05s", "1h 12m"), up to now while busy; '' before one started or when free. */
 export function elapsedLabel(a: Pick<Agent, 'status' | 'startedAt' | 'endedAt'>, now: number): string {

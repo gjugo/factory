@@ -71,7 +71,7 @@ export function TopBar() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" asChild className={cn('relative', needsYou > 0 && 'text-destructive')}>
-              <Link to={links.overview()} aria-label={needsYou ? `${needsYou} things need you` : 'Nothing needs you'}>
+              <Link to={links.overview('needs-you')} aria-label={needsYou ? `${needsYou} things need you` : 'Nothing needs you'}>
                 <BellDot className="size-4" aria-hidden />
                 {needsYou > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-white tabular-nums" aria-hidden>

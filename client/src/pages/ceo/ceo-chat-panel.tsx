@@ -21,6 +21,9 @@ import { firstUnreadId, followNewMessage, groupByDay, isAtBottom, readMarkFor, u
 // messages only from the bottom, marks what's on screen read, and offers a jump back down while you read older ones.
 // Messages read aloud have a ▶ to hear them again; the composer has the mic and the hands-free switch (voice/).
 
+/** One-tap questions under the composer while it's empty, as on cubefarm's phone. */
+const QUICK_ASKS = ["What's everyone working on?", 'Should a team grow?', 'Plan the next milestone for the busiest project.'];
+
 const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 function useDocumentVisible() {
@@ -250,6 +253,15 @@ export function CeoChatPanel({ className }: { className?: string }) {
         }}
       >
         <MicStatus kind="ceo" />
+        {!text && (
+          <div className="flex flex-wrap gap-1.5" aria-label="Quick questions">
+            {QUICK_ASKS.map((q) => (
+              <Button key={q} type="button" size="sm" variant="outline" className="h-7 rounded-full px-2.5 text-xs font-normal" disabled={sending} onClick={() => void send(q)}>
+                {q}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <Label htmlFor={`${id}-composer`} className="sr-only">
             Message {ceoName}
