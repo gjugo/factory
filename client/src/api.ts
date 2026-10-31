@@ -32,6 +32,9 @@ async function clip(url: string): Promise<Blob> {
 
 const r = (repoId: string) => `/api/repos/${encodeURIComponent(repoId)}`;
 
+/** One of QA's screenshots on a PR; `version` (the QA record's updatedAt) refreshes it after a new round. */
+export const qaShotUrl = (repoId: string, pr: number, index: number, version?: number) => `${r(repoId)}/pulls/${pr}/qa-shots/${index}${version ? `?v=${version}` : ''}`;
+
 /** An agent's coding agent, model and effort ('' = the office default), and where they work (docs/cloud.md). */
 export interface AgentSetupPatch {
   cli?: AgentCli | '';
