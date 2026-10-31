@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CEO_ID } from '../../../shared/types';
-import { links, parseCard, repoIdFrom } from './links';
+import { links, parseAgentTab, parseCard, repoIdFrom } from './links';
 
 describe('links', () => {
   it('builds every page', () => {
@@ -14,6 +14,16 @@ describe('links', () => {
     expect(links.ceo()).toBe('/ceo');
     expect(links.settings()).toBe('/settings');
     expect(links.timelapse()).toBe('/timelapse');
+  });
+
+  it('opens an agent on a tab, and the terminal grid', () => {
+    expect(links.agent('a1', 'terminal')).toBe('/agents/a1');
+    expect(links.agent('a1', 'prompt')).toBe('/agents/a1?tab=prompt');
+    expect(links.agentsGrid()).toBe('/agents?view=grid');
+    expect(links.agentsGrid(['a1', 'b 2'])).toBe('/agents?view=grid&ids=a1,b%202');
+    expect(parseAgentTab('screen')).toBe('screen');
+    expect(parseAgentTab('nope')).toBe('terminal');
+    expect(parseAgentTab(null)).toBe('terminal');
   });
 
   it('opens a card on the board', () => {

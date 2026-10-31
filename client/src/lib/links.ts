@@ -9,12 +9,21 @@ export const links = {
   board: (repoId: string, card?: BoardCard) => `/projects/${repoPath(repoId)}${card ? `?card=${cardParam(card)}` : ''}`,
   projectSettings: (repoId: string) => `/projects/${repoPath(repoId)}/settings`,
   agents: () => '/agents',
-  agent: (id: string) => `/agents/${encodeURIComponent(id)}`,
+  /** The terminal grid, watching these agents (none: let the page pick). */
+  agentsGrid: (ids: readonly string[] = []) => `/agents?view=grid${ids.length ? `&ids=${ids.map(encodeURIComponent).join(',')}` : ''}`,
+  /** An agent's page, on one of its tabs (the terminal when none). */
+  agent: (id: string, tab?: AgentTab) => `/agents/${encodeURIComponent(id)}${tab && tab !== 'terminal' ? `?tab=${tab}` : ''}`,
   ceo: () => '/ceo',
   settings: () => '/settings',
   timelapse: () => '/timelapse',
   setup: () => '/setup',
 };
+
+export const AGENT_TABS = ['terminal', 'settings', 'prompt', 'screen', 'record'] as const;
+export type AgentTab = (typeof AGENT_TABS)[number];
+
+/** An agent page's ?tab= value; the terminal for anything else. */
+export const parseAgentTab = (value: string | null): AgentTab => (AGENT_TABS.includes(value as AgentTab) ? (value as AgentTab) : 'terminal');
 
 /** A card on a project's board: an issue or a pull request, by number. */
 export type BoardCard = { kind: 'issue' | 'pr'; number: number };

@@ -27,7 +27,7 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --success: oklch(0.52 0.14 150);
-  --warning: oklch(0.56 0.14 60);
+  --warning: oklch(0.52 0.14 60); /* 4.5:1 on its own 10% tint (banners, badges) */
   --info: oklch(0.52 0.15 255);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -159,4 +159,10 @@
     @apply bg-background text-foreground antialiased;
     overflow-x: hidden;
   }
+}
+
+/* xterm draws faint (SGR 2) text at half alpha, which reads at about 3.4:1 on the light terminal: the muted token keeps
+   it quieter than the rest and readable (4.5:1+) in both themes. */
+.xterm .xterm-rows span.xterm-dim {
+  color: var(--muted-foreground);
 }
