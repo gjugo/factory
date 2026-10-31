@@ -542,6 +542,17 @@ export function legacyRequest<T extends object = HireRequestView>(r: T | Record<
   return { ...rest, cli: typeof rest.cli === 'string' ? rest.cli : '' } as T;
 }
 
+/** Settings the 3D office had and factory dropped (#24): the dog, holiday themes, weather and world events. */
+export const REMOVED_SETTINGS = ['dogName', 'themes', 'weather', 'worldEvents'] as const;
+
+/** Settings as old state files and journals hold them, without the ones factory dropped. */
+export function legacySettings<T extends object>(s: T | undefined): Partial<T> {
+  if (!s || typeof s !== 'object') return {};
+  const out = { ...s } as Record<string, unknown>;
+  for (const k of REMOVED_SETTINGS) delete out[k];
+  return out as Partial<T>;
+}
+
 // ---------- reading ----------
 
 /** The lines of a journal file; a line cut short by a crash (or anything else unreadable) is skipped. */

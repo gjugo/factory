@@ -27,7 +27,7 @@ describe("a tab's watch", () => {
     expect(parseWatch({ type: 'lines', floor: 0, agents: [] })).toEqual(watch(0));
     expect(parseWatch({ type: 'lines', floor: 1.5, agents: [] })).toBeNull();
     expect(parseWatch({ type: 'hello' })).toBeNull();
-    expect(parseWatch({ type: 'watch', f: 2 })).toBeNull(); // presence's watch (shared/presence.ts), not this one
+    expect(parseWatch({ type: 'watch', f: 2 })).toBeNull(); // the 3D office's old presence watch, not this one
     expect(parseWatch('lines')).toBeNull();
     expect(parseWatch({ type: 'lines', floor: 1, agents: Array.from({ length: 50 }, (_, i) => `a${i}`) })?.agents).toHaveLength(20);
     expect(sameWatch(watch(1, ['a']), watch(1, ['a']))).toBe(true);
