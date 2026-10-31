@@ -17,6 +17,7 @@ export default function AgentPage() {
   const loaded = useStore((s) => s.loaded);
   const agent = useStore((s) => s.agents[id]);
   const log = useStore((s) => s.logs[id]);
+  const replaying = useStore((s) => s.replaying);
   if (!loaded) return <Skeleton className="h-64" />;
   if (!agent) return <EmptyState title="Agent not found" description="They may have left the team." action={<Button asChild variant="outline"><Link to={links.agents()}>All agents</Link></Button>} />;
   const doing = agent.issueNumber ? `#${agent.issueNumber} ${agent.issueTitle ?? ''}` : agent.role === 'ceo' ? 'Runs the office' : 'Nothing assigned';
@@ -30,7 +31,7 @@ export default function AgentPage() {
         <CardContent className="min-h-0">
           <ScrollArea className="h-80 rounded-md bg-muted/50">
             <pre className="p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap" aria-label={`${agent.name}'s latest lines`}>
-              {(log ?? []).slice(-200).map((l) => l.text).join('\n') || 'Nothing yet.'}
+              {replaying ? "Terminal output isn't recorded in the journal. Go back to live to see it." : (log ?? []).slice(-200).map((l) => l.text).join('\n') || 'Nothing yet.'}
             </pre>
           </ScrollArea>
         </CardContent>

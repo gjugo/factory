@@ -8,6 +8,7 @@ describe('crumbsFor', () => {
     expect(crumbsFor('/', names)).toEqual([{ label: 'Overview' }]);
     expect(crumbsFor('/projects', names)).toEqual([{ label: 'Projects' }]);
     expect(crumbsFor('/settings', names)).toEqual([{ label: 'Settings' }]);
+    expect(crumbsFor('/timelapse', names)).toEqual([{ label: 'Time-lapse' }]);
     expect(crumbsFor('/nope', names)).toEqual([{ label: 'Not found' }]);
   });
 

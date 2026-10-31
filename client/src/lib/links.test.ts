@@ -13,6 +13,7 @@ describe('links', () => {
     expect(links.agent(CEO_ID)).toBe(`/agents/${CEO_ID}`);
     expect(links.ceo()).toBe('/ceo');
     expect(links.settings()).toBe('/settings');
+    expect(links.timelapse()).toBe('/timelapse');
   });
 
   it('opens a card on the board', () => {

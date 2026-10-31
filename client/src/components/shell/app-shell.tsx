@@ -11,10 +11,11 @@ import { useApplyTheme } from '@/lib/theme';
 import { useStore } from '@/store';
 import { AppSidebar } from './app-sidebar';
 import { Banners } from './banners';
+import { ReplayBar } from './replay-bar';
 import { TopBar } from './top-bar';
 
-// Every page sits in this frame: the sidebar, the top bar, the banners, and what's shared (⌘K, the CEO sheet, toasts,
-// confirmations). It also points the tab's watch at the route's project.
+// Every page sits in this frame: the sidebar, the top bar, the banners, the time-lapse's bar while it plays, and what's
+// shared (⌘K, the CEO sheet, toasts, confirmations). It also points the tab's watch at the route's project.
 
 export function AppShell() {
   useApplyTheme();
@@ -50,6 +51,7 @@ export function AppShell() {
           <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6">
             <Outlet />
           </main>
+          <ReplayBar />
         </SidebarInset>
         <ConfirmDialog />
         <Toaster position="bottom-right" closeButton />

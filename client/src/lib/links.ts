@@ -12,6 +12,7 @@ export const links = {
   agent: (id: string) => `/agents/${encodeURIComponent(id)}`,
   ceo: () => '/ceo',
   settings: () => '/settings',
+  timelapse: () => '/timelapse',
   setup: () => '/setup',
 };
 

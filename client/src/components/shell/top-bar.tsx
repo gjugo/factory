@@ -15,6 +15,7 @@ import { CeoSheet } from './ceo-sheet';
 import { CommandMenu } from './command-menu';
 import { ConnectionStatus } from './connection-status';
 import { ProjectSwitcher } from './project-switcher';
+import { ReplayBadge } from './replay-bar';
 import { ThemeToggle } from './theme-toggle';
 
 /** The bar over every page: where you are, the project switcher, the office's state, what needs you, the CEO and the theme. */
@@ -54,6 +55,7 @@ export function TopBar() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <ReplayBadge />
         <div className="hidden md:block">
           <ProjectSwitcher />
         </div>

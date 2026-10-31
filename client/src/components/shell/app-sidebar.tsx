@@ -1,4 +1,4 @@
-import { Bot, Building2, Crown, Factory, FolderGit2, LayoutDashboard, Plus, Settings } from 'lucide-react';
+import { Bot, Building2, Crown, Factory, FolderGit2, History, LayoutDashboard, Plus, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import { StatusDot } from '@/components/shared/status-badge';
 import {
@@ -31,6 +31,7 @@ const PAGES = [
   { title: 'Agents', to: links.agents(), icon: Bot },
   { title: 'CEO', to: links.ceo(), icon: Crown },
   { title: 'Projects', to: links.projects(), icon: FolderGit2, exact: true },
+  { title: 'Time-lapse', to: links.timelapse(), icon: History },
 ];
 
 export function AppSidebar() {

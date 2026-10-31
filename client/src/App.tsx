@@ -12,6 +12,7 @@ import ProjectSettingsPage from '@/pages/project-settings';
 import ProjectsPage from '@/pages/projects';
 import SettingsPage from '@/pages/settings';
 import SetupPage from '@/pages/setup';
+import TimelapsePage from '@/pages/timelapse';
 
 // The routes. Until the office's first-run setup is done (settings.setupDone) every route shows the setup page.
 
@@ -37,6 +38,7 @@ export function App() {
             <Route path="agents" element={<AgentsPage />} />
             <Route path="agents/:id" element={<AgentPage />} />
             <Route path="ceo" element={<CeoPage />} />
+            <Route path="timelapse" element={<TimelapsePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="setup" element={<SetupPage />} />
             <Route path="*" element={<NotFoundPage />} />
