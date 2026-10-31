@@ -57,7 +57,7 @@ describe('setupScript', () => {
     expect(script).toContain('for t in tmux lsof gh');
     expect(script).toContain(`if [ -f '${setupMarker(versions, 1)}' ]`);
     expect(setupMarker(versions, 1)).not.toBe(setupMarker({ ...versions, claude: '2.1.300' }, 1));
-    expect(script.trim().endsWith('echo CUBEFARM_SETUP_OK')).toBe(true);
+    expect(script.trim().endsWith('echo FACTORY_SETUP_OK')).toBe(true);
   });
 
   it("gives git a helper that reads GitHub's token from the environment, never from disk", () => {
@@ -134,13 +134,13 @@ describe('the other desk scripts', () => {
 
 describe('signing a CLI in', () => {
   it("asks the Box's own CLI whether it's signed in, by its exit code only", () => {
-    expect(signInCheckScript('claude')).toBe(`if '/workspace/home/.factory/cli/bin/claude' auth status --json >/dev/null 2>&1; then echo CUBEFARM_SIGNED_IN; else echo CUBEFARM_SIGNED_OUT; fi`);
+    expect(signInCheckScript('claude')).toBe(`if '/workspace/home/.factory/cli/bin/claude' auth status --json >/dev/null 2>&1; then echo FACTORY_SIGNED_IN; else echo FACTORY_SIGNED_OUT; fi`);
     expect(signInCheckScript('codex')).toContain(`'/workspace/home/.factory/cli/bin/codex' login status >/dev/null 2>&1`);
   });
 
   it('reads what the check said, and nothing when it never ran', () => {
-    expect(signInOutcome('CUBEFARM_SIGNED_IN\n')).toBe(true);
-    expect(signInOutcome('some noise\nCUBEFARM_SIGNED_OUT')).toBe(false);
+    expect(signInOutcome('FACTORY_SIGNED_IN\n')).toBe(true);
+    expect(signInOutcome('some noise\nFACTORY_SIGNED_OUT')).toBe(false);
     expect(signInOutcome('bash: line 1: claude: not found')).toBeNull();
     expect(signInOutcome('')).toBeNull();
   });

@@ -279,7 +279,7 @@ export async function reconnectClis(terminalFor: (agentId: string) => AgentTermi
       if (meta.cli === 'codex' && meta.resumeId) void codexThread('archive', meta.resumeId, h.exit === null ? new Promise((r) => setTimeout(r, 5000)) : undefined);
       continue;
     }
-    const l: LiveCli = { agentId: meta.agentId, cli: meta.cli, term, proc: adoptPty(h), token: meta.token, dir: meta.dir, resumeId: meta.resumeId ?? null, statusLine: '🏢 cubefarm', shots: new Set(), session: null };
+    const l: LiveCli = { agentId: meta.agentId, cli: meta.cli, term, proc: adoptPty(h), token: meta.token, dir: meta.dir, resumeId: meta.resumeId ?? null, statusLine: '🏢 factory', shots: new Set(), session: null };
     wire(l);
     waitAtPrompt(l);
     // Resizing makes the CLI draw its whole screen again, over whatever the saved copy of the terminal missed.
@@ -322,7 +322,7 @@ export async function reconnectBoxClis(kept: KeptBoxCli[], terminalFor: (agentId
         k.record(null); // gone without finishing: the office resumes or requeues its task
         return;
       }
-      const l: LiveCli = { agentId: k.agentId, cli: k.rec.cli, term, proc: null, token: k.rec.token, dir: k.rec.dir, resumeId: k.rec.resumeId, statusLine: '🏢 cubefarm', shots: new Set(), session: null, box: { api: k.api, boxId: k.rec.boxId } };
+      const l: LiveCli = { agentId: k.agentId, cli: k.rec.cli, term, proc: null, token: k.rec.token, dir: k.rec.dir, resumeId: k.rec.resumeId, statusLine: '🏢 factory', shots: new Set(), session: null, box: { api: k.api, boxId: k.rec.boxId } };
       const p = boxPty(l, { api: k.api, boxId: k.rec.boxId, record: (r) => k.record(r), connection: k.connection }, term.cols, term.rows, readFrom(k.rec));
       l.proc = p;
       wire(l);
@@ -491,7 +491,7 @@ export function startCliSession(opts: SessionOptions, callbacks: SessionCallback
   const sessionId = opts.resumeSessionId ?? crypto.randomUUID();
   const dir = box ? boxSessionDir(token) : path.join(SESSIONS_DIR, token);
   const started = Date.now();
-  const statusLine = `🏢 cubefarm${opts.label ? ` · ${opts.label}` : ''}`;
+  const statusLine = `🏢 factory${opts.label ? ` · ${opts.label}` : ''}`;
   const toolNames = new Map<string, string>();
   const officePrompts: string[] = []; // prompts the office typed, so the ones the manager typed are told apart
   const launched: string[] = []; // every prompt the CLI was given, as given (Codex: finds its main thread)
@@ -887,7 +887,7 @@ export function startCliSession(opts: SessionOptions, callbacks: SessionCallback
   // In a Box nothing of the office's own environment goes along (a Windows PATH, the manager's other secrets): only
   // what a Box needs and the credentials this CLI signs in with.
   const env: Record<string, string> = {};
-  if (box) Object.assign(env, BOX_ENV, box.env, launch.env, { CUBEFARM_STATUS: statusLine });
+  if (box) Object.assign(env, BOX_ENV, box.env, launch.env, { FACTORY_STATUS: statusLine });
   else {
     for (const [k, v] of Object.entries(process.env)) {
       if (v === undefined) continue;

@@ -1493,11 +1493,14 @@ function boxDeskRepo(cwd: string): string | null {
  * A fake Upstash account (docs/cloud.md): any key opens it, and its Boxes are created, set up, paused and deleted
  * with a little delay, so a demo office shows cloud agents' Boxes coming up. Their sessions are the demo's fake ones.
  * A new Box's coding agents aren't signed in (`logins`: Box id -> the CLIs signed in there) until the fake sign-in.
+ * The office's first Box turns up two more beside it: a cubefarm office's (never counted as the office's or touched)
+ * and an orphan of this office (an agent who left while it was closed), for Delete orphans to find.
  */
 function demoBoxes(logins: Map<string, Set<string>>): BoxApi {
   const boxes = new Map<string, BoxInfo>();
   const installed = new Set<string>();
   let seq = 0;
+  let orphaned = false;
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const box = (id: string) => {
     const b = boxes.get(id);
@@ -1510,6 +1513,13 @@ function demoBoxes(logins: Map<string, Set<string>>): BoxApi {
       await wait(2500);
       const b: BoxInfo = { id: `demo-box-${++seq}`, name: o.name, labels: o.labels, status: 'running' };
       boxes.set(b.id, b);
+      const office = o.labels.find((l) => l.startsWith('fo:'));
+      if (!orphaned && office) {
+        orphaned = true;
+        const orphan: BoxInfo = { id: 'demo-orphan-box', name: `factory-${office.slice(3)}-0dd0ne00`, labels: o.labels.map((l) => (l.startsWith('m:') ? 'm:0dd0ne00' : l)), status: 'paused' };
+        const neighbour: BoxInfo = { id: 'demo-cubefarm-box', name: 'cubefarm-n8b0r1-a1b2c3d4', labels: ['cubefarm', 'cf:n8b0r1', 'm:a1b2c3d4'], status: 'paused' };
+        for (const x of [orphan, neighbour]) boxes.set(x.id, x);
+      }
       return { ...b };
     },
     get: async (id) => (boxes.has(id) ? { ...boxes.get(id)! } : null),
@@ -1527,14 +1537,14 @@ function demoBoxes(logins: Map<string, Set<string>>): BoxApi {
     run: async (id, script) => {
       box(id).status = 'running';
       const cli = /claude'? auth /.test(script) ? 'claude' : 'codex';
-      if (script.includes('CUBEFARM_SIGNED_IN')) return { code: 0, output: logins.get(id)?.has(cli) ? 'CUBEFARM_SIGNED_IN' : 'CUBEFARM_SIGNED_OUT' };
+      if (script.includes('FACTORY_SIGNED_IN')) return { code: 0, output: logins.get(id)?.has(cli) ? 'FACTORY_SIGNED_IN' : 'FACTORY_SIGNED_OUT' };
       if (/auth logout|' logout/.test(script)) {
         logins.get(id)?.delete(cli);
         return { code: 0, output: '' };
       }
-      if (script.includes('CUBEFARM_SETUP_OK')) {
+      if (script.includes('FACTORY_SETUP_OK')) {
         await wait(3500);
-        return { code: 0, output: 'CUBEFARM_SETUP_OK' };
+        return { code: 0, output: 'FACTORY_SETUP_OK' };
       }
       if (script.includes('git worktree add')) {
         await wait(900);
@@ -1583,7 +1593,7 @@ function demoCloud(): CloudBackend {
 }
 
 /** Where the demo's sign-ins send the manager: nowhere real. */
-const DEMO_SIGN_IN = { claude: 'https://example.com/cubefarm-demo/claude-sign-in', codex: 'https://example.com/cubefarm-demo/codex-device' };
+const DEMO_SIGN_IN = { claude: 'https://example.com/factory-demo/claude-sign-in', codex: 'https://example.com/factory-demo/codex-device' };
 
 /**
  * The demo's sign-in in a cloud agent's terminal, drawn as each CLI's own one looks, with a made-up link: Enter (after

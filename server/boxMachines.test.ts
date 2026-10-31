@@ -45,7 +45,7 @@ function fakeAccount(boxes: BoxInfo[] = [], answer: (script: string) => { code: 
     },
     run: async (id, script, o) => {
       calls.push({ op: 'run', id, script, env: o?.env });
-      if (script.includes('CUBEFARM_SETUP_OK')) return { code: 0, output: 'CUBEFARM_SETUP_OK' };
+      if (script.includes('FACTORY_SETUP_OK')) return { code: 0, output: 'FACTORY_SETUP_OK' };
       return answer(script);
     },
     read: async (_id, file) => files.get(file) ?? null,
@@ -92,7 +92,7 @@ describe('BoxMachines', () => {
   });
 
   it("finds a machine's Box on the account after a restart, and wakes it when paused", async () => {
-    const { api, calls } = fakeAccount([{ id: 'old', name: 'cubefarm-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'paused' }]);
+    const { api, calls } = fakeAccount([{ id: 'old', name: 'factory-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'paused' }]);
     const m = machines(api);
     expect(await m.ensure('a1b2c3d4')).toBe('old');
     expect(calls.map((c) => c.op)).toContain('resume');
@@ -105,7 +105,7 @@ describe('BoxMachines', () => {
     expect(await m.prepareDesk('a1b2c3d4', 'acme/web', { defaultBranch: 'main' }, 'swarm/issue-1-ada')).toBe('/workspace/home/work/acme__web');
     const prep = calls.find((c) => c.script?.includes('git worktree add'))!;
     expect(prep.env).toEqual({ GH_TOKEN: 'gho_token' });
-    const setup = calls.find((c) => c.script?.includes('CUBEFARM_SETUP_OK'))!;
+    const setup = calls.find((c) => c.script?.includes('FACTORY_SETUP_OK'))!;
     expect(setup.env).toBeUndefined();
   });
 
@@ -132,7 +132,7 @@ describe('BoxMachines', () => {
   });
 
   it("leaves a paused Box asleep for housekeeping", async () => {
-    const { api, calls } = fakeAccount([{ id: 'p', name: 'cubefarm-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'paused' }]);
+    const { api, calls } = fakeAccount([{ id: 'p', name: 'factory-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'paused' }]);
     const m = machines(api);
     await m.release('a1b2c3d4', 'acme/web', 4100);
     expect(await m.sweep('a1b2c3d4', 'acme/web', [])).toBe(0);
@@ -150,7 +150,7 @@ describe('BoxMachines', () => {
   });
 
   it("saves unpushed work from every worktree before deleting the Box", async () => {
-    const { api, calls, files, boxes } = fakeAccount([{ id: 'x', name: 'cubefarm-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'running' }], (s) => {
+    const { api, calls, files, boxes } = fakeAccount([{ id: 'x', name: 'factory-k3f9qa-a1b2c3d4', labels: boxLabels('k3f9qa', 'a1b2c3d4'), status: 'running' }], (s) => {
       if (s.includes("ls -1 '/workspace/home/work'")) return { code: 0, output: 'acme/web\nnot a repo\n' };
       if (s.includes('format-patch')) {
         files.set('/workspace/home/.factory/leftovers.patch', Buffer.from('From abc\n+work\n').toString('base64'));

@@ -44,7 +44,7 @@ export interface BoxFile {
 }
 
 export interface BoxApi {
-  /** Every Box on the account (they all count towards the plan's limit); the office's carry the `cubefarm` label. */
+  /** Every Box on the account (they all count towards the plan's limit); the office's carry the `factory` label. */
   list(): Promise<BoxInfo[]>;
   create(o: { name: string; labels: string[]; size: BoxSize }): Promise<BoxInfo>;
   /** null: there's no such Box any more. */

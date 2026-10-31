@@ -111,7 +111,7 @@ export interface Backend {
 export interface CloudBackend {
   /** The Box API behind an Upstash Box API key. */
   boxes(key: string): BoxApi;
-  /** The environment cloud credentials are read from (CUBEFARM_CLAUDE_TOKEN): the office's own, or the demo's. */
+  /** The environment cloud credentials are read from (FACTORY_CLAUDE_TOKEN): the office's own, or the demo's. */
   env(): Record<string, string | undefined>;
   /** The manager's gh login token ('' when gh isn't signed in), for cloud agents' GitHub when no token is saved. */
   ghToken(): Promise<string>;
