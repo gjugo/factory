@@ -6,8 +6,8 @@ import { depsCurrent, INSTALL_TIMEOUT_MS, killTree, readDeps, writeMarker } from
 import { git } from './exec.ts';
 import * as workspace from './workspace.ts';
 
-// A floor's app, run for the preview monitor: checked out in its own worktree (never the floor's main checkout,
-// which for floor 1 is the folder the live office runs from), installed, started, and watched until its port answers.
+// A project's app, run for the preview monitor: checked out in its own worktree (never the project's main checkout,
+// which for project 1 is the folder the live office runs from), installed, started, and watched until its port answers.
 
 export const PREVIEW_SLUG = 'preview';
 export const PREVIEW_BRANCH = 'swarm-preview';
@@ -19,13 +19,13 @@ export interface PreviewJob {
   fullName: string;
   defaultBranch: string;
   pr: number | null;
-  /** The worktree (desks/<slug>) and the branch it runs from: the floor's preview, or a PR preview's slot. */
+  /** The worktree (desks/<slug>) and the branch it runs from: the project's preview, or a PR preview's slot. */
   slug: string;
   branch: string;
   port: number;
   command: string | null;
   env: Record<string, string>;
-  /** "<floor> app · <ref>", for the demo's placeholder page. */
+  /** "<project> app · <ref>", for the demo's placeholder page. */
   title: string;
 }
 
@@ -44,7 +44,7 @@ export interface PreviewHandle {
 
 export interface PreviewBackend {
   start(job: PreviewJob, cb: PreviewCallbacks): PreviewHandle;
-  /** Whether there is something to run with no command set (a package.json in the floor's checkout). */
+  /** Whether there is something to run with no command set (a package.json in the project's checkout). */
   hasDefault(fullName: string): Promise<boolean>;
 }
 
@@ -54,7 +54,7 @@ export const fillPlaceholders = (s: string, port: number, tmp: string) => s.repl
 /**
  * The environment a preview runs with: the office's, minus Claude credentials and config (same rule as the agents,
  * with no exceptions) and minus the office's own SWARM_* settings, so an app that is itself an office never
- * inherits the live office's home or port. Then the floor's env, then PORT.
+ * inherits the live office's home or port. Then the project's env, then PORT.
  */
 export function previewEnv(extra: Record<string, string>, port: number, tmp: string): Record<string, string> {
   const env: Record<string, string> = {};
@@ -107,7 +107,7 @@ export function defaultCommand(pkg: { scripts?: Record<string, string> } | null)
 
 class Stopped extends Error {}
 
-/** One run of a floor's app, from checkout to a listening port. */
+/** One run of a project's app, from checkout to a listening port. */
 class RealPreview implements PreviewHandle {
   private child: ChildProcess | null = null;
   private stopped = false;
@@ -150,8 +150,8 @@ class RealPreview implements PreviewHandle {
       this.stopped = true;
       cb.failed(
         pkg
-          ? 'package.json has no dev, start or preview script. Set a preview command for this floor.'
-          : 'Nothing to run: this floor has no preview command and no package.json.',
+          ? 'package.json has no dev, start or preview script. Set a preview command for this project.'
+          : 'Nothing to run: this project has no preview command and no package.json.',
         true,
       );
       return;

@@ -13,7 +13,7 @@ import type { RepoView } from '../../../../shared/types';
 import { attempt } from '../projects/actions';
 
 // The brief (what the project should build next, which the CEO turns into issues), and what the CEO wrote about the
-// project: its one-line summary and the QA brief every test pass follows. cubefarm's FloorBrief.
+// project: its one-line summary and the QA brief every test pass follows. From cubefarm's brief panel.
 
 export function BriefCard({ repo }: { repo: RepoView }) {
   const mission = useDraft(repo.mission);
@@ -35,13 +35,13 @@ export function BriefCard({ repo }: { repo: RepoView }) {
     }
   };
   const plan = async () => {
-    if (await act('plan', () => api.planFloor(repo.id, mission.value.trim()))) {
+    if (await act('plan', () => api.planProject(repo.id, mission.value.trim()))) {
       mission.set(mission.value.trim());
       useStore.getState().pushToast('success', 'The CEO will plan it: see the CEO status below.');
     }
   };
   const onboard = async () => {
-    if (await act('onboard', () => api.onboardFloor(repo.id))) useStore.getState().pushToast('success', `The CEO will study ${repo.fullName} again.`);
+    if (await act('onboard', () => api.onboardProject(repo.id))) useStore.getState().pushToast('success', `The CEO will study ${repo.fullName} again.`);
   };
   return (
     <Card>

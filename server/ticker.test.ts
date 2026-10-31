@@ -108,7 +108,7 @@ describe('Ticker', () => {
   const lookups = { name: (id: string) => ({ marple: 'Marple', ken: 'Ken' })[id] ?? null, author: (_: string, pr: number) => (pr === 212 ? 'Ken' : null) };
   const agentEv = (id: string, facts: AgentFacts) => ({ type: 'agent' as const, agent: { id, ...facts } as unknown as Omit<AgentView, 'log'> });
 
-  it('seeds a floor on its first sync, then reports what changed', () => {
+  it('seeds a project on its first sync, then reports what changed', () => {
     const t = new Ticker(lookups);
     expect(t.observe({ type: 'repo', repo: repo([], [], { lastSync: null }) })).toEqual([]);
     expect(t.observe({ type: 'repo', repo: repo([pull(1)]) })).toEqual([]);
@@ -133,7 +133,7 @@ describe('Ticker', () => {
     expect(t.observe({ type: 'logs', tails: { ken: [] } })).toEqual([]);
   });
 
-  it('keeps the last lines per floor and forgets a floor that goes', () => {
+  it('keeps the last lines per project and forgets a project that goes', () => {
     const t = new Ticker(lookups);
     for (let i = 0; i < TICKER_KEEP + 5; i++) t.observe({ type: 'qa', qa: qa(i % 2 ? 'testing' : 'queued') });
     t.observe({ type: 'qa', qa: qa('testing', { repoId: 'acme/other' }) });

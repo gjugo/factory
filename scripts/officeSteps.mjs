@@ -34,7 +34,7 @@ export function parseSymref(output) {
 }
 
 /**
- * Why the office's folder must not be updated, or null when it may. The same rules as a floor's folder (syncMain):
+ * Why the office's folder must not be updated, or null when it may. The same rules as a project's folder (syncMain):
  * only on the default branch, with no local changes and no local commits. Nothing is ever stashed or discarded.
  */
 export function refusal({ branch, defaultBranch, dirty, ahead }) {

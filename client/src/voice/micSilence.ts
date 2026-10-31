@@ -12,7 +12,7 @@ export const MIN_SPEECH_LEVEL = 0.02;
 /** Speech is at least this many times the room's noise. */
 export const SPEECH_RATIO = 3;
 /** The room's noise is the quietest of the last this many levels (3 s at 20 a second): speech always has gaps. */
-export const FLOOR_SAMPLES = 60;
+export const BACKGROUND_SAMPLES = 60;
 /** The first levels only teach the mic the room. */
 export const WARMUP_SAMPLES = 6;
 
@@ -24,7 +24,7 @@ export interface Ears {
   start: number;
   /** When speech was last heard; null until it starts. */
   lastSpeech: number | null;
-  /** The latest microphone levels (RMS), newest last, at most FLOOR_SAMPLES. */
+  /** The latest microphone levels (RMS), newest last, at most BACKGROUND_SAMPLES. */
   levels: number[];
   /** How many levels it has heard in all. */
   heard: number;
@@ -33,7 +33,7 @@ export interface Ears {
 export const freshEars = (now: number): Ears => ({ start: now, lastSpeech: null, levels: [], heard: 0 });
 
 /** The room's noise: the quietest recent level. */
-export const noiseFloor = (e: Ears) => (e.levels.length ? Math.min(...e.levels) : 0);
+export const backgroundLevel = (e: Ears) => (e.levels.length ? Math.min(...e.levels) : 0);
 
 /** Words the browser is still recognising: someone is talking now. */
 export const heardWords = (e: Ears, now: number): Ears => ({ ...e, lastSpeech: now });
@@ -41,8 +41,8 @@ export const heardWords = (e: Ears, now: number): Ears => ({ ...e, lastSpeech: n
 /** One microphone level (about every 50 ms). Speech stands well above the room's noise, so a steady hum never counts. */
 export function heardLevel(e: Ears, level: number, now: number): Ears {
   if (!Number.isFinite(level) || level < 0) return e;
-  const levels = [...e.levels, level].slice(-FLOOR_SAMPLES);
-  const speech = e.heard >= WARMUP_SAMPLES && level >= Math.max(MIN_SPEECH_LEVEL, noiseFloor({ ...e, levels }) * SPEECH_RATIO);
+  const levels = [...e.levels, level].slice(-BACKGROUND_SAMPLES);
+  const speech = e.heard >= WARMUP_SAMPLES && level >= Math.max(MIN_SPEECH_LEVEL, backgroundLevel({ ...e, levels }) * SPEECH_RATIO);
   return { ...e, levels, heard: e.heard + 1, lastSpeech: speech ? now : e.lastSpeech };
 }
 

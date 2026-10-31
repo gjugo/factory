@@ -78,12 +78,12 @@ export function PreviewCard({ repo }: { repo: RepoView }) {
         {p.error && <Notice tone="danger">{p.error}</Notice>}
         {p.logTail.length > 0 && (
           <div className="grid gap-1.5">
-            <p className="text-sm font-medium" id={`log-${repo.floor}`}>
+            <p className="text-sm font-medium" id={`log-${repo.number}`}>
               Log
             </p>
             <pre
               tabIndex={0}
-              aria-labelledby={`log-${repo.floor}`}
+              aria-labelledby={`log-${repo.number}`}
               className="max-h-56 overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all"
             >
               {p.logTail.join('\n')}

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { FLOOR_SEATS } from '../shared/types.ts';
+import { PROJECT_SEATS } from '../shared/types.ts';
 
 export const PORT = Number(process.env.SWARM_PORT ?? 4517);
 // The office can start agents that run commands on this machine, so it listens on loopback unless the manager asks for
@@ -16,36 +16,45 @@ export const HOME_DIR = process.env.SWARM_HOME ?? path.join(os.homedir(), '.fact
 export const WORKSPACE_ROOT = path.join(HOME_DIR, 'workspaces');
 export const DEMO = process.argv.includes('--demo') || process.env.SWARM_DEMO === '1' || process.env.SWARM_DEMO === 'true';
 
-/** A demo company bigger than the usual two floors, for scale tests: floors, and people on each (#228). */
+/** A demo company bigger than the usual two projects, for scale tests: projects, and people on each (#228). */
 export interface DemoScale {
-  floors: number;
-  /** Agents per floor: up to FLOOR_SEATS, the desks a floor has. */
+  projects: number;
+  /** Agents per project: up to PROJECT_SEATS, the desks a project has. */
   agents: number;
 }
 
-export const DEMO_MAX = { floors: 20, agents: FLOOR_SEATS };
+export const DEMO_MAX = { projects: 20, agents: PROJECT_SEATS };
+
+const flagAt = (argv: string[], flag: string) => argv.findIndex((a) => a === flag || a.startsWith(`${flag}=`));
 
 /**
- * `--floors 10 --agents 15` (or `--floors=10`, or SWARM_DEMO_FLOORS / SWARM_DEMO_AGENTS) for the demo's big company;
- * null when neither is given: the usual demo. Either one alone takes the other from the usual demo's busier floor.
+ * `--projects 10 --agents 15` (or `--projects=10`, or SWARM_DEMO_PROJECTS / SWARM_DEMO_AGENTS) for the demo's big company;
+ * null when neither is given: the usual demo. Either one alone takes the other from the usual demo's busier project.
+ * `--floors` / SWARM_DEMO_FLOORS, their names from before projects were called projects, still work (demoScaleNote).
  */
 export function demoScale(argv: string[], env: NodeJS.ProcessEnv): DemoScale | null {
   const read = (flag: string, name: string) => {
-    const i = argv.findIndex((a) => a === flag || a.startsWith(`${flag}=`));
+    const i = flagAt(argv, flag);
     const raw = i < 0 ? env[name] : argv[i].includes('=') ? argv[i].slice(flag.length + 1) : argv[i + 1];
     const n = Number(raw);
     return raw === undefined || raw === '' || !Number.isFinite(n) ? null : Math.round(n);
   };
-  const floors = read('--floors', 'SWARM_DEMO_FLOORS');
+  const projects = read('--projects', 'SWARM_DEMO_PROJECTS') ?? read('--floors', 'SWARM_DEMO_FLOORS');
   const agents = read('--agents', 'SWARM_DEMO_AGENTS');
-  if (floors === null && agents === null) return null;
+  if (projects === null && agents === null) return null;
   const clamp = (n: number, max: number) => Math.max(1, Math.min(max, n));
-  return { floors: clamp(floors ?? 2, DEMO_MAX.floors), agents: clamp(agents ?? 6, DEMO_MAX.agents) };
+  return { projects: clamp(projects ?? 2, DEMO_MAX.projects), agents: clamp(agents ?? 6, DEMO_MAX.agents) };
 }
 
 export const DEMO_SCALE = DEMO ? demoScale(process.argv, process.env) : null;
+
+/** The deprecation line for the old names of --projects, or null when they aren't used. */
+export function demoScaleNote(argv: string[], env: NodeJS.ProcessEnv): string | null {
+  if (flagAt(argv, '--floors') >= 0) return '--floors is deprecated: use --projects.';
+  return env.SWARM_DEMO_FLOORS !== undefined ? 'SWARM_DEMO_FLOORS is deprecated: use SWARM_DEMO_PROJECTS.' : null;
+}
 // A big company keeps its own state, so it never mixes with the usual demo's.
-export const STATE_FILE = path.join(HOME_DIR, DEMO ? (DEMO_SCALE ? `demo-${DEMO_SCALE.floors}x${DEMO_SCALE.agents}-state.json` : 'demo-state.json') : 'state.json');
+export const STATE_FILE = path.join(HOME_DIR, DEMO ? (DEMO_SCALE ? `demo-${DEMO_SCALE.projects}x${DEMO_SCALE.agents}-state.json` : 'demo-state.json') : 'state.json');
 
 /** A port from the environment, or the fallback when it's unset or not a usable port. */
 export function envPort(value: string | undefined, fallback: number): number {
@@ -84,7 +93,7 @@ export function envMinutes(value: string | undefined, fallback: number): number 
   return value && Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-// Floor previews run on this port + the floor number, PR previews 100 above it (docs/how-it-works.md). Moving it only
+// Project previews run on this port + the project number, PR previews 100 above it (docs/how-it-works.md). Moving it only
 // keeps a test office's previews clear of another office's.
 export const PREVIEW_PORT = envPort(process.env.SWARM_PREVIEW_PORT, 6700);
 // A PR preview nobody has had on screen for this long stops.
@@ -92,9 +101,9 @@ export const PR_PREVIEW_IDLE_MS = envMinutes(process.env.SWARM_PR_PREVIEW_IDLE_M
 
 // How often each connected repo's issues and PRs are refreshed from GitHub.
 export const SYNC_INTERVAL_MS = 45_000;
-// How often idle agents on auto-assign floors look for new work.
+// How often idle agents on auto-assign projects look for new work.
 export const SCHEDULER_INTERVAL_MS = 8_000;
-// How often each floor's desks and finished branches are swept (also at start and after a let-go).
+// How often each project's desks and finished branches are swept (also at start and after a let-go).
 export const DESK_SWEEP_INTERVAL_MS = 30 * 60_000;
 // Terminal lines kept per agent.
 export const LOG_BUFFER = 600;

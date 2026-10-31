@@ -50,7 +50,7 @@ const agent = (over: Partial<Agent>): Agent =>
     ...over,
   }) as Agent;
 
-const repo = (id: string, floor: number) => ({ id, floor, fullName: id }) as RepoView;
+const repo = (id: string, project: number) => ({ id, number: project, fullName: id }) as RepoView;
 const settings = { runtime: 'terminal' as const, defaultCli: 'claude' as const, defaultModel: 'claude-opus-5-5', defaultEffort: 'medium' as const };
 
 describe('task labels', () => {
@@ -124,7 +124,7 @@ describe('groupAgents', () => {
   };
   const repos = [repo('acme/api', 2), repo('acme/web', 1), repo('acme/empty', 3)];
 
-  it('pins the CEO and sorts projects by floor and agents by desk', () => {
+  it('pins the CEO and sorts projects by project and agents by desk', () => {
     const g = groupAgents(agents, repos, '', 'all');
     expect(g.ceo?.id).toBe('ceo');
     expect(g.projects.map((p) => [p.repo.id, p.agents.map((a) => a.id)])).toEqual([

@@ -59,7 +59,7 @@ function repo(patch: Partial<RepoView> = {}): RepoView {
     description: 'A repo',
     url: 'https://github.com/o/r',
     defaultBranch: 'main',
-    floor: 1,
+    number: 1,
     color: '#ff0000',
     autoAssign: true,
     autoMerge: true,
@@ -176,7 +176,7 @@ describe('journalEvent: what is kept', () => {
     for (const ev of dropped) expect(journalEvent(ev)).toBeNull();
   });
 
-  it('keeps what changes the office look: agents, floors, QA, messages, usage, removals', () => {
+  it('keeps what changes the office look: agents, projects, QA, messages, usage, removals', () => {
     for (const ev of [
       { type: 'agent', agent: agent() },
       { type: 'repo', repo: repo() },
@@ -202,12 +202,12 @@ describe('journalEvent: what is kept', () => {
       {
         type: 'ops',
         ops: {
-          floors: [],
+          projects: [],
           total: {} as OpsView['total'],
           ceoCostToday: 0,
           alarms: [
-            { id: 'agent:ada', kind: 'agent', repoId: 'o/r', floor: 1, prNumber: null, agentId: 'ada', text: `Ada is stuck on an error: crashed with ${SECRETS.env}`, since: 1 },
-            { id: 'pr:o/r#2', kind: 'pr', repoId: 'o/r', floor: 1, prNumber: 2, agentId: null, text: `PR #2 needs you: GITHUB_TOKEN=${SECRETS.github}`, since: 1 },
+            { id: 'agent:ada', kind: 'agent', repoId: 'o/r', project: 1, prNumber: null, agentId: 'ada', text: `Ada is stuck on an error: crashed with ${SECRETS.env}`, since: 1 },
+            { id: 'pr:o/r#2', kind: 'pr', repoId: 'o/r', project: 1, prNumber: 2, agentId: null, text: `PR #2 needs you: GITHUB_TOKEN=${SECRETS.github}`, since: 1 },
           ],
         },
       },
@@ -219,7 +219,7 @@ describe('journalEvent: what is kept', () => {
     expect(recorded).not.toContain('crashed with');
     expect(recorded).not.toContain('stderr');
     expect(recorded).toContain('"Ada is stuck on an error"');
-    // the floor's look survives
+    // the project's look survives
     expect(recorded).toContain('Depends on #1');
     expect(recorded).toContain('my ElevenLabs key is [redacted]');
   });
@@ -289,7 +289,7 @@ describe('recorded: writing only what changed', () => {
     expect(out.map((l) => (isFrame(l) ? 'k' : l.e.type === 'agentPatch' ? l.e.set.currentTool : l.e.type))).toEqual(['k', 'Edit', 'k']);
   });
 
-  it("writes a known floor's update as a patch: the changed fields, and only the PRs that changed", () => {
+  it("writes a known project's update as a patch: the changed fields, and only the PRs that changed", () => {
     const last = frameKeys(frame({ repos: [repo({ pulls: [pull(2), pull(3)] })] }));
     const checks = recorded(last, journalEvent({ type: 'repo', repo: repo({ pulls: [pull(2, 'OPEN', { checks: 'failing' }), pull(3)] }) })!) as RepoPatch;
     expect(checks).toMatchObject({ type: 'repoPatch', id: 'o/r', set: {} });
@@ -352,6 +352,28 @@ describe('seeking', () => {
   it('skips a line a crash cut short', () => {
     const raw = `${JSON.stringify(files[0][0])}\n${JSON.stringify(files[0][1])}\n{"t":7,"e":{"ty`;
     expect(parseLines(raw).map((l) => l.t)).toEqual([0, 5]);
+  });
+
+  it('reads a day recorded before floors were called projects in today\'s shape', () => {
+    const ops = { floors: [{ repoId: 'o/r', floor: 3, alarms: 1 }], total: {}, ceoCostToday: 0, alarms: [{ id: 'pr:o/r#2', kind: 'pr', repoId: 'o/r', floor: 3, prNumber: 2, agentId: null, text: 'PR #2 needs you', since: 1 }] };
+    const old = [
+      { t: 0, k: { repos: [{ id: 'o/r', floor: 3, pulls: [] }], agents: [], qa: [], requests: [], messages: [], ops } },
+      { t: 1, e: { type: 'repo', repo: { id: 'o/r', floor: 3, pulls: [] } } },
+      { t: 2, e: { type: 'repoPatch', id: 'o/r', set: { floor: 2 } } },
+      { t: 3, e: { type: 'ops', ops } },
+    ];
+    const [k, repoEvent, patch, opsEvent] = parseLines(old.map((l) => JSON.stringify(l)).join('\n')) as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(k.k.repos).toEqual([{ id: 'o/r', number: 3, pulls: [] }]);
+    expect(repoEvent.e.repo).toEqual({ id: 'o/r', number: 3, pulls: [] });
+    expect(patch.e.set).toEqual({ number: 2 });
+    for (const o of [k.k.ops, opsEvent.e.ops]) {
+      expect(o).not.toHaveProperty('floors');
+      expect(o.projects).toEqual([{ repoId: 'o/r', number: 3, alarms: 1 }]);
+      expect(o.alarms[0]).toMatchObject({ repoId: 'o/r', project: 3, prNumber: 2 });
+      expect(o.alarms[0]).not.toHaveProperty('floor');
+    }
+    // today's lines pass as they are
+    expect(parseLines(JSON.stringify(files[0][0]))).toEqual([files[0][0]]);
   });
 });
 

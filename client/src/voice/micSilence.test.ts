@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLIP_MAX_MS } from '../../../shared/clipLimits';
-import { FLOOR_SAMPLES, freshEars, heardLevel, heardWords, listenRules, MIN_SPEECH_LEVEL, NO_SPEECH_MS, noiseFloor, sendsWhenDone, SILENCE_MS, verdict, WARMUP_SAMPLES, type Ears } from './micSilence';
+import { BACKGROUND_SAMPLES, freshEars, heardLevel, heardWords, listenRules, MIN_SPEECH_LEVEL, NO_SPEECH_MS, backgroundLevel, sendsWhenDone, SILENCE_MS, verdict, WARMUP_SAMPLES, type Ears } from './micSilence';
 
 /** Feeds a level every 50 ms from `from` to `to` and returns the ears. */
 function feed(e: Ears, level: (t: number) => number, from: number, to: number): Ears {
@@ -51,7 +51,7 @@ describe('the silence detector', () => {
     expect(hum(0)).toBeGreaterThan(MIN_SPEECH_LEVEL);
     const e = feed(freshEars(0), hum, 0, 5000);
     expect(e.lastSpeech).toBeNull();
-    expect(noiseFloor(e)).toBeGreaterThan(0.024);
+    expect(backgroundLevel(e)).toBeGreaterThan(0.024);
     expect(heardLevel(e, 0.2, 5000).lastSpeech).toBe(5000);
   });
 
@@ -64,7 +64,7 @@ describe('the silence detector', () => {
 
   it('keeps a short memory of levels', () => {
     const e = feed(freshEars(0), () => 0.01, 0, 10_000);
-    expect(e.levels).toHaveLength(FLOOR_SAMPLES);
+    expect(e.levels).toHaveLength(BACKGROUND_SAMPLES);
     expect(e.heard).toBe(200);
   });
 

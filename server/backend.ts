@@ -46,9 +46,9 @@ export interface Backend {
   commentPull(fullName: string, number: number, body: string): Promise<string>;
   uploadEvidence(fullName: string, filePath: string, data: Buffer): Promise<string>;
   ensureClone(fullName: string): Promise<void>;
-  /** Fast-forward the floor's main checkout to GitHub when that is safe; returns how it stands. */
+  /** Fast-forward the project's main checkout to GitHub when that is safe; returns how it stands. */
   syncMain(fullName: string, defaultBranch: string, opts: { touch: boolean }): Promise<workspace.MainSync | null>;
-  /** Point a floor at the user's own project folder (null: a clone the office manages). */
+  /** Point a project at the user's own project folder (null: a clone the office manages). */
   setLocalPath(fullName: string, dir: string | null): void;
   scanProjects(root: string): Promise<workspace.LocalFolder[]>;
   inspectFolder(dir: string): Promise<workspace.LocalFolder>;
@@ -57,7 +57,7 @@ export interface Backend {
   mainDir(fullName: string): string;
   /** Agents' machines (server/machines.ts): each agent's own clone, worktree and temp folder. */
   machines: MachineProvider;
-  /** A floor desk: the preview's worktrees, and agents' desks from before machines. */
+  /** A project desk: the preview's worktrees, and agents' desks from before machines. */
   deskDir(fullName: string, agentSlug: string): string;
   /** The desk folder is there: a session started in a missing one dies at once (Windows exit 267). */
   deskExists(dir: string): boolean;
@@ -65,7 +65,7 @@ export interface Backend {
   prepareDesk(fullName: string, base: workspace.DeskBase, agentSlug: string, branch: string, note?: (text: string) => void): Promise<string>;
   /** npm ci in a prepared desk unless nothing changed since the last one; never throws (see deps.ts installDesk). */
   installDeps(dir: string, cb: DepsCallbacks): Promise<DepsOutcome>;
-  /** `main`: the floor's checkout as it was when the desk was let go (default: mainDir now). */
+  /** `main`: the project's checkout as it was when the desk was let go (default: mainDir now). */
   removeDesk(fullName: string, agentSlug: string, main?: string): Promise<void>;
   /** Remove desks, stray desk folders and finished swarm/qa branches nothing in `keep` uses. */
   sweepDesks(fullName: string, keep: workspace.SweepKeep): Promise<workspace.SweepResult>;
@@ -85,7 +85,7 @@ export interface Backend {
   releaseClis(restart: boolean): Promise<void>;
   /** The coding-agent CLIs installed on this machine. */
   detectClis(): Promise<CliView[]>;
-  /** Run a floor's app for the preview monitor (its own worktree, its own port). */
+  /** Run a project's app for the preview monitor (its own worktree, its own port). */
   previews: PreviewBackend;
   /** The running office's own folder and its launcher, for the office's self-update. */
   office: OfficeHost;
@@ -97,8 +97,8 @@ export interface Backend {
   cloud: CloudBackend;
   /** The demo only: a made-up past week for mission control, so a fresh demo office has numbers from the start. */
   seedOps?(repos: string[], now: number): OpsHistory;
-  /** The demo only: how many agents a fresh demo office hires on floor `floor`. */
-  demoTeam?(floor: number): number;
+  /** The demo only: how many agents a fresh demo office hires on project `project`. */
+  demoTeam?(project: number): number;
   /** The demo only: Claude's usage warning, or its limit, on demand, as a session would report it. */
   simulateUsage?(kind: 'warning' | 'limit', now: number): UsageWarning | { limitResetsAt: number };
   /** The demo only: the office doctor's scenarios (a restart with desks gone and work finished, a stuck session). */
@@ -132,7 +132,7 @@ export const realCloud: CloudBackend = {
   gitIdentity: async (login) => {
     const get = (key: string) => run('git', ['config', '--global', key], { timeoutMs: 10_000 }).then((v) => v.trim(), () => '');
     const [name, email] = await Promise.all([get('user.name'), get('user.email')]);
-    return { name: name || login || 'cubefarm', email: email || (login ? `${login}@users.noreply.github.com` : '') };
+    return { name: name || login || 'factory', email: email || (login ? `${login}@users.noreply.github.com` : '') };
   },
   reconnect: reconnectBoxClis,
   detach: detachBoxClis,
@@ -147,7 +147,7 @@ export interface DemoDoctor {
   finishQuietly(fullName: string, kind: 'issue' | 'pr', n: number): void;
   /** The agent's fake session goes silent: no more output, and nudges go unanswered. False when it has none. */
   stall(agentId: string): boolean;
-  /** A merged PR whose issue GitHub never closed; null when the floor has no open issue. */
+  /** A merged PR whose issue GitHub never closed; null when the project has no open issue. */
   unclosedMerge(fullName: string, mergedAgoMs: number): { issue: number; pr: number } | null;
 }
 

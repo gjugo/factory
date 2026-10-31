@@ -20,18 +20,18 @@ describe('triageStep', () => {
 });
 
 describe('checkTriageTarget', () => {
-  const ok = { jobFloor: 2, floor: 2, pr: 12, pull: { state: 'OPEN' }, status: 'needs-human' as const };
+  const ok = { jobProject: 2, project: 2, pr: 12, pull: { state: 'OPEN' }, status: 'needs-human' as const };
 
-  it('lets a triage job act on a stuck PR on its own floor', () => {
+  it('lets a triage job act on a stuck PR on its own project', () => {
     expect(() => checkTriageTarget(ok)).not.toThrow();
   });
 
   it('refuses outside a triage job', () => {
-    expect(() => checkTriageTarget({ ...ok, jobFloor: null })).toThrow(expect.objectContaining({ status: 409 }));
+    expect(() => checkTriageTarget({ ...ok, jobProject: null })).toThrow(expect.objectContaining({ status: 409 }));
   });
 
-  it('refuses another floor’s PR and unknown PRs with 404', () => {
-    expect(() => checkTriageTarget({ ...ok, floor: 3 })).toThrow(expect.objectContaining({ status: 404, message: "This triage is for floor 2: PR #12 on floor 3 isn't yours to change." }));
+  it('refuses another project’s PR and unknown PRs with 404', () => {
+    expect(() => checkTriageTarget({ ...ok, project: 3 })).toThrow(expect.objectContaining({ status: 404, message: "This triage is for project 2: PR #12 on project 3 isn't yours to change." }));
     expect(() => checkTriageTarget({ ...ok, pull: undefined })).toThrow(expect.objectContaining({ status: 404 }));
   });
 

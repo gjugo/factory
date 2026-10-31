@@ -44,7 +44,7 @@ export function CommandMenu() {
     setOpen(false);
     navigate(to);
   };
-  const floorName = (repoId: string) => repos.find((r) => r.id === repoId)?.fullName.split('/').pop();
+  const projectName = (repoId: string) => repos.find((r) => r.id === repoId)?.fullName.split('/').pop();
   const people = Object.values(agents).sort((a, b) => (a.role === 'ceo' ? -1 : b.role === 'ceo' ? 1 : a.name.localeCompare(b.name)));
 
   return (
@@ -94,7 +94,7 @@ export function CommandMenu() {
                 <CommandItem key={a.id} value={`agent ${a.name} ${a.id}`} onSelect={() => go(links.agent(a.id))}>
                   {a.role === 'ceo' ? <Crown aria-hidden /> : <Bot aria-hidden />}
                   {a.name}
-                  <CommandShortcut>{a.role === 'ceo' ? 'CEO' : `${floorName(a.repoId) ?? ''} · ${statusLook('agent', a.status).label}`}</CommandShortcut>
+                  <CommandShortcut>{a.role === 'ceo' ? 'CEO' : `${projectName(a.repoId) ?? ''} · ${statusLook('agent', a.status).label}`}</CommandShortcut>
                 </CommandItem>
               ))}
             </CommandGroup>

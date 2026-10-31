@@ -7,7 +7,7 @@ import { Swarm } from './swarm.ts';
 // (a plan from their brief, or their message), never in its own reviews, onboarding or triage.
 type Internals = {
   ensureCeo(interrupted: unknown[]): void;
-  fileIssue(x: { floor: number; title: string; body: string }): Promise<string>;
+  fileIssue(x: { project: number; title: string; body: string }): Promise<string>;
   ceoAsked: boolean;
   state: { ceo: { queue: { kind: string; repoId?: string }[] } };
 };
@@ -25,11 +25,11 @@ describe('who asks for new work', () => {
     const review = ceoJobPrompt({ kind: 'review', at: 0 }, null);
     expect(review).not.toContain('plan the next milestone');
     expect(review).toContain('file no issues');
-    const floor = { floor: 2, fullName: 'acme/app', clone: '/clones/app', mission: 'Add voice messages', backlog: 0 };
-    const onboard = ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, floor);
+    const project = { number: 2, fullName: 'acme/app', clone: '/clones/app', mission: 'Add voice messages', backlog: 0 };
+    const onboard = ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, project);
     expect(onboard).toContain('File no issues');
     expect(onboard).not.toContain('plan the first milestone');
-    expect(ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, { ...floor, mission: '', backlog: 3 })).toContain('file no new ones');
+    expect(ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, { ...project, mission: '', backlog: 3 })).toContain('file no new ones');
   });
 });
 
@@ -45,13 +45,13 @@ describe("the CEO's file_issue", () => {
   it("is refused in a job the manager didn't ask for", async () => {
     const { internals } = await office();
     internals.ceoAsked = false;
-    await expect(internals.fileIssue({ floor: 1, title: 'Add a dark mode', body: 'Nobody asked.' })).rejects.toThrow(NOT_ASKED);
+    await expect(internals.fileIssue({ project: 1, title: 'Add a dark mode', body: 'Nobody asked.' })).rejects.toThrow(NOT_ASKED);
   });
 
   it('files work the manager asked for', async () => {
     const { internals } = await office();
     internals.ceoAsked = true;
-    await expect(internals.fileIssue({ floor: 1, title: 'Add a dark mode', body: 'The manager asked.' })).resolves.toMatch(/^Filed #\d+ on floor 1: Add a dark mode\.$/);
+    await expect(internals.fileIssue({ project: 1, title: 'Add a dark mode', body: 'The manager asked.' })).resolves.toMatch(/^Filed #\d+ on project 1: Add a dark mode\.$/);
   });
 
   it('plans a brief given when the project moves in, as a job of its own after onboarding', async () => {

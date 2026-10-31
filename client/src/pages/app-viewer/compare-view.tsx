@@ -72,8 +72,8 @@ export function CompareView({
   useEffect(() => {
     const frames = { main: mainFrame, pr: prFrame };
     const onMessage = (e: MessageEvent) => {
-      const d = e.data as { cubefarmSync?: unknown; x?: unknown; y?: unknown; path?: unknown } | null;
-      if (!d || (d.cubefarmSync !== 'scroll' && d.cubefarmSync !== 'path')) return;
+      const d = e.data as { factorySync?: unknown; x?: unknown; y?: unknown; path?: unknown } | null;
+      if (!d || (d.factorySync !== 'scroll' && d.factorySync !== 'path')) return;
       const from: Side | null = !e.source ? null : e.source === mainFrame.current?.contentWindow ? 'main' : e.source === prFrame.current?.contentWindow ? 'pr' : null;
       if (!from) return;
       const to: Side = from === 'main' ? 'pr' : 'main';
@@ -81,11 +81,11 @@ export function CompareView({
       if (!sync) return;
       const target = frames[to].current?.contentWindow;
       const now = Date.now();
-      if (d.cubefarmSync === 'scroll' && now > driven.current[from]) {
+      if (d.factorySync === 'scroll' && now > driven.current[from]) {
         driven.current[to] = now + 250;
-        target?.postMessage({ cubefarmSyncTo: 'scroll', x: d.x, y: d.y }, '*');
-      } else if (d.cubefarmSync === 'path' && typeof d.path === 'string' && relayPath(paths.current, from, d.path, now)) {
-        target?.postMessage({ cubefarmSyncTo: 'path', path: d.path }, '*');
+        target?.postMessage({ factorySyncTo: 'scroll', x: d.x, y: d.y }, '*');
+      } else if (d.factorySync === 'path' && typeof d.path === 'string' && relayPath(paths.current, from, d.path, now)) {
+        target?.postMessage({ factorySyncTo: 'path', path: d.path }, '*');
       }
     };
     window.addEventListener('message', onMessage);

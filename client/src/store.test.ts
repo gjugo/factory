@@ -5,50 +5,50 @@ import { CEO_ID } from '../../shared/types';
 // Toasts go to sonner, which needs a page to show them: here they are only recorded.
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
-const { floorPrCounts, kanbanFor, needsYouCount, projectHealth, qaKey, totalNeedsYou, useStore } = await import('./store');
+const { projectPrCounts, kanbanFor, needsYouCount, projectHealth, qaKey, totalNeedsYou, useStore } = await import('./store');
 const { toast } = await import('sonner');
 const { EMPTY_OPS } = await import('./ops');
 
 const pr = (number: number, state: PullInfo['state'], headRefName = `feature/${number}`) => ({ number, state, headRefName }) as PullInfo;
-const repo = (floor: number, ...pulls: PullInfo[]) => ({ id: `acme/floor${floor}`, floor, pulls }) as RepoView;
+const repo = (project: number, ...pulls: PullInfo[]) => ({ id: `acme/project${project}`, number: project, pulls }) as RepoView;
 const snapshot = (repos: RepoView[], agents: Partial<AgentView>[] = []) =>
   ({ type: 'snapshot', data: { repos, agents, qa: [], requests: [], messages: [], phoneReadAt: 0, settings: {}, ceo: {}, usage: {}, clis: [] } as unknown as WorldSnapshot }) as const;
-const alarmFor = (id: string, repoId = 'acme/floor1'): OpsAlarm => ({ id, kind: 'pr', repoId, floor: 1, prNumber: 7, agentId: null, text: 'PR #7 needs you', since: 1 });
+const alarmFor = (id: string, repoId = 'acme/project1'): OpsAlarm => ({ id, kind: 'pr', repoId, project: 1, prNumber: 7, agentId: null, text: 'PR #7 needs you', since: 1 });
 
 beforeEach(() => {
-  useStore.setState({ loaded: false, repos: [], agents: {}, ops: EMPTY_OPS, ceoOpen: false, chatViews: 0, watched: {}, workers: 0, floor: -1 });
+  useStore.setState({ loaded: false, repos: [], agents: {}, ops: EMPTY_OPS, ceoOpen: false, chatViews: 0, watched: {}, workers: 0, project: -1 });
   vi.mocked(toast).mockClear();
   vi.mocked(toast.error).mockClear();
 });
 
 describe('apply: projects', () => {
-  it('keeps the projects in floor order and patches only what a batch carries', () => {
+  it('keeps the projects in project order and patches only what a batch carries', () => {
     const { apply } = useStore.getState();
-    apply(snapshot([{ ...repo(2), fullName: 'acme/floor2' }, { ...repo(1, pr(3, 'OPEN')), fullName: 'acme/floor1' }]));
-    expect(useStore.getState().repos.map((r) => r.id)).toEqual(['acme/floor1', 'acme/floor2']);
-    apply({ type: 'repos', repos: [{ id: 'acme/floor1', pulls: [pr(3, 'MERGED')] }, { id: 'acme/gone', pulls: [] }] });
+    apply(snapshot([{ ...repo(2), fullName: 'acme/project2' }, { ...repo(1, pr(3, 'OPEN')), fullName: 'acme/project1' }]));
+    expect(useStore.getState().repos.map((r) => r.id)).toEqual(['acme/project1', 'acme/project2']);
+    apply({ type: 'repos', repos: [{ id: 'acme/project1', pulls: [pr(3, 'MERGED')] }, { id: 'acme/gone', pulls: [] }] });
     const s = useStore.getState();
     expect(s.repos.map((r) => [r.id, r.fullName])).toEqual([
-      ['acme/floor1', 'acme/floor1'],
-      ['acme/floor2', 'acme/floor2'],
+      ['acme/project1', 'acme/project1'],
+      ['acme/project2', 'acme/project2'],
     ]);
     expect(s.repos[0].pulls[0].state).toBe('MERGED');
   });
 
   it('adds a newly connected project from its full view and drops a removed one', () => {
     const { apply } = useStore.getState();
-    apply(snapshot([{ ...repo(1), fullName: 'acme/floor1' }]));
-    apply({ type: 'repo', repo: { ...repo(2), fullName: 'acme/floor2' } });
-    expect(useStore.getState().repos.map((r) => r.floor)).toEqual([1, 2]);
-    apply({ type: 'repoRemoved', repoId: 'acme/floor1' });
-    expect(useStore.getState().repos.map((r) => r.id)).toEqual(['acme/floor2']);
+    apply(snapshot([{ ...repo(1), fullName: 'acme/project1' }]));
+    apply({ type: 'repo', repo: { ...repo(2), fullName: 'acme/project2' } });
+    expect(useStore.getState().repos.map((r) => r.number)).toEqual([1, 2]);
+    apply({ type: 'repoRemoved', repoId: 'acme/project1' });
+    expect(useStore.getState().repos.map((r) => r.id)).toEqual(['acme/project2']);
   });
 
   it('skips the 3D office life events an older office or recording still sends', () => {
     const { apply } = useStore.getState();
-    apply(snapshot([{ ...repo(1), fullName: 'acme/floor1' }]));
+    apply(snapshot([{ ...repo(1), fullName: 'acme/project1' }]));
     const before = useStore.getState();
-    for (const type of ['pong', 'progress', 'reward', 'weather', 'visitors', 'visitorPose', 'visitorEmote', 'visitorPing']) apply({ type, repoId: 'acme/floor1' } as never);
+    for (const type of ['pong', 'progress', 'reward', 'weather', 'visitors', 'visitorPose', 'visitorEmote', 'visitorPing']) apply({ type, repoId: 'acme/project1' } as never);
     expect(useStore.getState()).toBe(before);
   });
 });
@@ -110,61 +110,61 @@ describe('the watch in the store', () => {
   });
 });
 
-describe('floorPrCounts', () => {
-  const floor = (...pulls: PullInfo[]) => ({ ...repo(1, ...pulls), issues: [], autoMerge: false }) as RepoView;
+describe('projectPrCounts', () => {
+  const project = (...pulls: PullInfo[]) => ({ ...repo(1, ...pulls), issues: [], autoMerge: false }) as RepoView;
   const draft = (number: number) => ({ ...pr(number, 'OPEN'), isDraft: true }) as PullInfo;
   const records = (...recs: [number, QaStatus][]) =>
-    Object.fromEntries(recs.map(([n, status]) => [qaKey('acme/floor1', n), { repoId: 'acme/floor1', prNumber: n, status, round: 1 } as QaView]));
+    Object.fromEntries(recs.map(([n, status]) => [qaKey('acme/project1', n), { repoId: 'acme/project1', prNumber: n, status, round: 1 } as QaView]));
 
   it('counts an open passed PR as ready, but never a merged or closed one', () => {
-    const r = floor(pr(1, 'OPEN'), pr(2, 'MERGED'), pr(3, 'CLOSED'));
-    expect(floorPrCounts(r, records([1, 'passed'], [2, 'passed'], [3, 'failed']))).toEqual({ inQa: 0, ready: 1, needsYou: 0 });
+    const r = project(pr(1, 'OPEN'), pr(2, 'MERGED'), pr(3, 'CLOSED'));
+    expect(projectPrCounts(r, records([1, 'passed'], [2, 'passed'], [3, 'failed']))).toEqual({ inQa: 0, ready: 1, needsYou: 0 });
   });
 
   it('counts needs-human separately, as well as in QA', () => {
-    const r = floor(pr(1, 'OPEN'), pr(2, 'OPEN'), pr(3, 'OPEN'));
-    expect(floorPrCounts(r, records([1, 'needs-human'], [2, 'fixing']))).toEqual({ inQa: 3, ready: 0, needsYou: 1 });
+    const r = project(pr(1, 'OPEN'), pr(2, 'OPEN'), pr(3, 'OPEN'));
+    expect(projectPrCounts(r, records([1, 'needs-human'], [2, 'fixing']))).toEqual({ inQa: 3, ready: 0, needsYou: 1 });
   });
 
   it('does not count a needs-human PR the CEO is still triaging as needing you', () => {
-    const r = floor(pr(1, 'OPEN'), pr(2, 'OPEN'));
+    const r = project(pr(1, 'OPEN'), pr(2, 'OPEN'));
     const qa = records([1, 'needs-human'], [2, 'needs-human']);
-    qa[qaKey('acme/floor1', 1)] = { ...qa[qaKey('acme/floor1', 1)], ceoLooking: true };
-    expect(floorPrCounts(r, qa)).toEqual({ inQa: 2, ready: 0, needsYou: 1 });
+    qa[qaKey('acme/project1', 1)] = { ...qa[qaKey('acme/project1', 1)], ceoLooking: true };
+    expect(projectPrCounts(r, qa)).toEqual({ inQa: 2, ready: 0, needsYou: 1 });
   });
 
   it('matches the Kanban In QA and Ready to merge columns, drafts included', () => {
-    const r = floor(pr(1, 'OPEN'), draft(2), draft(3), pr(4, 'OPEN'), pr(5, 'OPEN'), pr(6, 'MERGED'), pr(7, 'CLOSED'));
+    const r = project(pr(1, 'OPEN'), draft(2), draft(3), pr(4, 'OPEN'), pr(5, 'OPEN'), pr(6, 'MERGED'), pr(7, 'CLOSED'));
     const qa = records([1, 'passed'], [2, 'passed'], [4, 'testing'], [5, 'needs-human'], [6, 'passed'], [7, 'needs-human']);
     const cols = kanbanFor(r, [], qa);
-    const counts = floorPrCounts(r, qa);
+    const counts = projectPrCounts(r, qa);
     expect(counts).toEqual({ inQa: 3, ready: 2, needsYou: 1 });
     expect([counts.inQa, counts.ready]).toEqual([cols.qa.length, cols.ready.length]);
   });
 });
 
 describe('needs-you counts and project health', () => {
-  const floor = (...pulls: PullInfo[]) => ({ ...repo(1, ...pulls), issues: [], autoMerge: false, cloneStatus: 'ready' }) as RepoView;
-  const needsHuman = { [qaKey('acme/floor1', 1)]: { repoId: 'acme/floor1', prNumber: 1, status: 'needs-human', round: 3 } as QaView };
+  const project = (...pulls: PullInfo[]) => ({ ...repo(1, ...pulls), issues: [], autoMerge: false, cloneStatus: 'ready' }) as RepoView;
+  const needsHuman = { [qaKey('acme/project1', 1)]: { repoId: 'acme/project1', prNumber: 1, status: 'needs-human', round: 3 } as QaView };
 
   it("takes the project's alarms, or its needs-human PRs when there are more of those", () => {
-    expect(needsYouCount(floor(pr(1, 'OPEN')), needsHuman, EMPTY_OPS)).toBe(1);
+    expect(needsYouCount(project(pr(1, 'OPEN')), needsHuman, EMPTY_OPS)).toBe(1);
     const ops = { ...EMPTY_OPS, alarms: [alarmFor('a'), alarmFor('b'), alarmFor('c', 'acme/other')] };
-    expect(needsYouCount(floor(pr(1, 'OPEN')), needsHuman, ops)).toBe(2);
+    expect(needsYouCount(project(pr(1, 'OPEN')), needsHuman, ops)).toBe(2);
   });
 
   it('adds pending team changes to the office total', () => {
     const requests = [{ id: 'r1', status: 'pending' }, { id: 'r2', status: 'approved' }] as never;
-    expect(totalNeedsYou([floor(pr(1, 'OPEN'))], needsHuman, EMPTY_OPS, requests)).toBe(2);
+    expect(totalNeedsYou([project(pr(1, 'OPEN'))], needsHuman, EMPTY_OPS, requests)).toBe(2);
   });
 
   it('is attention for something waiting on you or failing, busy while agents work, else idle', () => {
     const working = { id: 'k', status: 'working' } as AgentView;
-    expect(projectHealth(floor(), [working], 1)).toBe('attention');
-    expect(projectHealth(floor(), [{ ...working, status: 'error' }], 0)).toBe('attention');
-    expect(projectHealth(floor(), [working], 0)).toBe('busy');
-    expect(projectHealth(floor(), [{ ...working, status: 'idle' }], 0)).toBe('idle');
-    expect(projectHealth({ ...floor(), cloneStatus: 'cloning' }, [], 0)).toBe('setup');
+    expect(projectHealth(project(), [working], 1)).toBe('attention');
+    expect(projectHealth(project(), [{ ...working, status: 'error' }], 0)).toBe('attention');
+    expect(projectHealth(project(), [working], 0)).toBe('busy');
+    expect(projectHealth(project(), [{ ...working, status: 'idle' }], 0)).toBe('idle');
+    expect(projectHealth({ ...project(), cloneStatus: 'cloning' }, [], 0)).toBe('setup');
   });
 });
 
@@ -210,7 +210,7 @@ describe('kanbanFor', () => {
 
 describe('batched agents and watched terminal lines', () => {
   const line = (id: number, kind: LogLine['kind'] = 'tool') => ({ id, t: id, kind, text: `line ${id}` }) as LogLine;
-  const ken = { id: 'ken', name: 'Ken', role: 'agent', status: 'working', currentTool: 'Read', repoId: 'acme/floor1', log: [] } as Partial<AgentView>;
+  const ken = { id: 'ken', name: 'Ken', role: 'agent', status: 'working', currentTool: 'Read', repoId: 'acme/project1', log: [] } as Partial<AgentView>;
 
   beforeEach(() => useStore.getState().apply(snapshot([repo(1)], [ken])));
 

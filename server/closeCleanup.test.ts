@@ -14,7 +14,7 @@ import {
   toAsk,
   toHold,
   type Closure,
-  type FloorState,
+  type ProjectState,
   type HeldRecord,
   type Holder,
   type KnownPull,
@@ -25,7 +25,7 @@ const BUSY = ['preparing', 'working'];
 const T = 1_000_000; // when the last sync's fetch started
 
 const pull = (number: number, state: KnownPull['state'] = 'OPEN', headRefName = `swarm/issue-${number - 100}-ada`, closesIssues = [number - 100]): KnownPull => ({ number, state, headRefName, closesIssues });
-const floor = (f: Partial<FloorState> = {}): FloorState => ({ fetchedAt: T, openIssues: [], pulls: [], closedIssues: new Map(), closedPulls: new Map(), ...f });
+const project = (f: Partial<ProjectState> = {}): ProjectState => ({ fetchedAt: T, openIssues: [], pulls: [], closedIssues: new Map(), closedPulls: new Map(), ...f });
 const learned = (p: KnownPull, at = T + 1): [number, LearnedPull] => [p.number, { ...p, at }];
 
 // The 2026-10-04 cast: Barbara on issue #192 (her PR #198, branch swarm/issue-192-barbara), Guido fixing it, Marple testing.
@@ -39,32 +39,32 @@ const issue192: Closure = { kind: 'issue', number: 192, mergedBy: [] };
 
 describe('what the office knows', () => {
   it('trusts what it learned after the last list was fetched over that list', () => {
-    const f = floor({ openIssues: [192], pulls: [pull(198)], closedIssues: new Map([[192, T + 5]]), closedPulls: new Map([learned(pull(198, 'CLOSED'))]) });
+    const f = project({ openIssues: [192], pulls: [pull(198)], closedIssues: new Map([[192, T + 5]]), closedPulls: new Map([learned(pull(198, 'CLOSED'))]) });
     expect(issueOpen(192, f)).toBe(false);
     expect(pullNow(198, f)?.state).toBe('CLOSED');
   });
 
   it('takes a newer list showing it open again as a reopen', () => {
-    const f = floor({ openIssues: [192], pulls: [pull(198)], closedIssues: new Map([[192, T - 5]]), closedPulls: new Map([learned(pull(198, 'CLOSED'), T - 5)]) });
+    const f = project({ openIssues: [192], pulls: [pull(198)], closedIssues: new Map([[192, T - 5]]), closedPulls: new Map([learned(pull(198, 'CLOSED'), T - 5)]) });
     expect(issueOpen(192, f)).toBe(true);
     expect(pullNow(198, f)?.state).toBe('OPEN');
     expect(forgettable(f, T)).toEqual({ issues: [192], pulls: [198] });
   });
 
   it("can't tell about what the lists leave out (100 open issues, 50 open and 8 merged PRs) until GitHub is asked", () => {
-    expect(issueOpen(5, floor())).toBeNull();
-    expect(pullNow(7, floor())).toBeNull();
-    expect(issueOpen(5, floor({ closedIssues: new Map([[5, T - 60_000]]) }))).toBe(false); // not listed: still closed
+    expect(issueOpen(5, project())).toBeNull();
+    expect(pullNow(7, project())).toBeNull();
+    expect(issueOpen(5, project({ closedIssues: new Map([[5, T - 60_000]]) }))).toBe(false); // not listed: still closed
   });
 
   it('forgets what it learned after a day', () => {
-    const f = floor({ closedIssues: new Map([[1, T - 25 * 3_600_000], [2, T]]), closedPulls: new Map([learned(pull(9, 'MERGED'), T - 25 * 3_600_000)]) });
+    const f = project({ closedIssues: new Map([[1, T - 25 * 3_600_000], [2, T]]), closedPulls: new Map([learned(pull(9, 'MERGED'), T - 25 * 3_600_000)]) });
     expect(forgettable(f, T)).toEqual({ issues: [1], pulls: [9] });
   });
 });
 
 describe('may this task start? (stillOpen)', () => {
-  const f = floor({ openIssues: [5], pulls: [pull(105), pull(106, 'MERGED')], closedIssues: new Map([[192, T + 1]]), closedPulls: new Map([learned(pull(198, 'CLOSED'))]) });
+  const f = project({ openIssues: [5], pulls: [pull(105), pull(106, 'MERGED')], closedIssues: new Map([[192, T + 1]]), closedPulls: new Map([learned(pull(198, 'CLOSED'))]) });
 
   it('refuses a closed issue, and a closed or merged PR', () => {
     expect(stillOpen({ kind: 'issue', number: 192 }, f)).toBe(false);
@@ -90,40 +90,40 @@ describe('may this task start? (stillOpen)', () => {
 describe('toAsk', () => {
   it('asks about held issues and PRs the sync does not list, once each', () => {
     const agents: Holder[] = [barbara, { ...guido, status: 'done' }, marple, { ...barbara, id: 'idle', status: 'idle', issueNumber: 3 }];
-    expect(toAsk(agents, [rec('fixing'), { ...rec('queued'), prNumber: 300 }], [], floor(), new Map(), T)).toEqual({ issues: [192], pulls: [198, 300] });
+    expect(toAsk(agents, [rec('fixing'), { ...rec('queued'), prNumber: 300 }], [], project(), new Map(), T)).toEqual({ issues: [192], pulls: [198, 300] });
   });
 
   it('leaves alone what the sync lists, and what GitHub said is open a moment ago', () => {
-    const f = floor({ openIssues: [192], pulls: [pull(198, 'MERGED')] });
+    const f = project({ openIssues: [192], pulls: [pull(198, 'MERGED')] });
     expect(toAsk([barbara, guido], [rec('passed')], [], f, new Map(), T)).toEqual({ issues: [], pulls: [] });
     const openAt = new Map([['issue#192', T - 1000], ['pr#198', T - ASK_AGAIN_MS - 1]]);
-    expect(toAsk([barbara, guido], [], [], floor(), openAt, T)).toEqual({ issues: [], pulls: [198] });
+    expect(toAsk([barbara, guido], [], [], project(), openAt, T)).toEqual({ issues: [], pulls: [198] });
   });
 
   it('asks about held issues the sync does not list, so a hold on an issue closed on GitHub ends', () => {
-    expect(toAsk([], [], [8, 192], floor({ openIssues: [192] }), new Map(), T)).toEqual({ issues: [8], pulls: [] });
+    expect(toAsk([], [], [8, 192], project({ openIssues: [192] }), new Map(), T)).toEqual({ issues: [8], pulls: [] });
   });
 
   it('asks about a few at a time', () => {
     const records = Array.from({ length: 10 }, (_, i) => ({ ...rec('queued'), prNumber: 400 + i }));
-    expect(toAsk([], records, [], floor(), new Map(), T).pulls).toHaveLength(MAX_ASKS);
+    expect(toAsk([], records, [], project(), new Map(), T).pulls).toHaveLength(MAX_ASKS);
   });
 });
 
 describe('closuresHeld', () => {
   it('finds the closed PRs agents or records hold, then the closed issues', () => {
-    const f = floor({ pulls: [pull(105, 'MERGED')], closedIssues: new Map([[192, T + 1]]), closedPulls: new Map([learned(pull(198, 'CLOSED', 'swarm/issue-192-barbara', [192]))]) });
+    const f = project({ pulls: [pull(105, 'MERGED')], closedIssues: new Map([[192, T + 1]]), closedPulls: new Map([learned(pull(198, 'CLOSED', 'swarm/issue-192-barbara', [192]))]) });
     const ada: Holder = { ...barbara, id: 'ada', status: 'done', issueNumber: 5, prNumber: 105, branch: 'swarm/issue-5-ada' };
     expect(closuresHeld([barbara, guido, ada], [rec('fixing')], f)).toEqual([closed198, { kind: 'pr', number: 105, merged: true, headRefName: 'swarm/issue-5-ada' }, issue192]);
   });
 
   it('knows an issue its PR closed by merging', () => {
-    const f = floor({ pulls: [pull(105, 'MERGED')], closedIssues: new Map([[5, T + 1]]) });
+    const f = project({ pulls: [pull(105, 'MERGED')], closedIssues: new Map([[5, T + 1]]) });
     expect(closuresHeld([{ ...barbara, issueNumber: 5 }], [], f)).toEqual([{ kind: 'issue', number: 5, mergedBy: [{ number: 105, headRefName: 'swarm/issue-5-ada' }] }]);
   });
 
   it('holds nothing for idle agents, the CEO, or open work', () => {
-    const f = floor({ openIssues: [192], pulls: [pull(198)] });
+    const f = project({ openIssues: [192], pulls: [pull(198)] });
     expect(closuresHeld([{ ...barbara, status: 'idle' }, { ...barbara, role: 'ceo', issueNumber: 1 }, barbara, guido], [rec('queued')], f)).toEqual([]);
   });
 });
@@ -201,7 +201,7 @@ describe('afterClose', () => {
 });
 
 describe('toHold: closing a PR never puts its issue back in line by itself', () => {
-  const f = floor({ openIssues: [192, 5] });
+  const f = project({ openIssues: [192, 5] });
 
   it("holds a closed PR's open issues for the manager", () => {
     expect(toHold(pull(198, 'CLOSED', 'swarm/issue-192-barbara', [192]), f)).toEqual([192]);
@@ -209,7 +209,7 @@ describe('toHold: closing a PR never puts its issue back in line by itself', () 
   });
 
   it('never holds an issue that is closed, or anything after a merge', () => {
-    expect(toHold(pull(198, 'CLOSED', 'swarm/issue-192-barbara', [192]), floor({ closedIssues: new Map([[192, T]]) }))).toEqual([]);
+    expect(toHold(pull(198, 'CLOSED', 'swarm/issue-192-barbara', [192]), project({ closedIssues: new Map([[192, T]]) }))).toEqual([]);
     expect(toHold(pull(198, 'MERGED', 'swarm/issue-192-barbara', [192]), f)).toEqual([]);
   });
 });

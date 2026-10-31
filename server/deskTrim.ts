@@ -1,5 +1,5 @@
 // Freeing disk space on idle desks (#109). A desk keeps its own node_modules and build output between tasks, which
-// adds up to gigabytes on a busy floor. A desk that has sat idle longer than settings.trimIdleDesksMin loses them
+// adds up to gigabytes on a busy project. A desk that has sat idle longer than settings.trimIdleDesksMin loses them
 // (workspace.trimDesk); its next task installs again from the warm npm cache. These are the sweep's pure decisions.
 
 /** How often the office looks for idle desks to trim. */

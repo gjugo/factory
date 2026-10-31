@@ -23,7 +23,7 @@ describe('the time-lapse words', () => {
     expect(sizeText(3.5 * 1024 * 1024)).toBe('3.5 MB');
   });
 
-  it("explains each of cubefarm's speeds as an hour in some time", () => {
+  it("explains each of the time-lapse's speeds as an hour in some time", () => {
     expect(SPEEDS.map(speedNote)).toEqual(['an hour in 2 minutes', 'an hour in 30 seconds', 'an hour in 6 seconds']);
   });
 

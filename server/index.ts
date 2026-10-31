@@ -7,7 +7,7 @@ import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { CLIP_MAX_BYTES, CLIP_TOO_BIG } from '../shared/clipLimits.ts';
 import { DAY_PARTS } from '../shared/speech.ts';
-import { DEMO, DEMO_SCALE, HOST, PORT, STATE_FILE, VERSION, WORKSPACE_ROOT, isLoopback, localAddress, networkUrls } from './config.ts';
+import { DEMO, DEMO_SCALE, demoScaleNote, HOST, PORT, STATE_FILE, VERSION, WORKSPACE_ROOT, isLoopback, localAddress, networkUrls } from './config.ts';
 import { MACHINES_DIR } from './workspace.ts';
 import { realBackend } from './backend.ts';
 import { handleHook, handleMcp, setOfficeUrl } from './cliRunner.ts';
@@ -60,18 +60,18 @@ app.get('/api/state', route(() => swarm.snapshot()));
 app.get('/api/github/repos', route((req) => swarm.listGithubRepos(str(req.query.owner) || undefined)));
 
 // What happens once a project moves in: the CEO's brief, and whether work starts on its own.
-const floorOptions = (req: Request) => ({ mission: str(req.body.mission), autoAssign: req.body.autoAssign === true });
+const projectOptions = (req: Request) => ({ mission: str(req.body.mission), autoAssign: req.body.autoAssign === true });
 
-app.post('/api/repos', route((req) => swarm.connectRepo(str(req.body.fullName).trim(), floorOptions(req))));
+app.post('/api/repos', route((req) => swarm.connectRepo(str(req.body.fullName).trim(), projectOptions(req))));
 
 // Your projects folder
 app.get('/api/folders', route((req) => swarm.listProjectFolders(str(req.query.dir) || undefined)));
-app.post('/api/folders/connect', route((req) => swarm.connectFolder(str(req.body.path), floorOptions(req))));
+app.post('/api/folders/connect', route((req) => swarm.connectFolder(str(req.body.path), projectOptions(req))));
 app.post(
   '/api/folders/publish',
   route((req) =>
     swarm.publishFolder(str(req.body.path), {
-      ...floorOptions(req),
+      ...projectOptions(req),
       name: str(req.body.name) || undefined,
       visibility: req.body.visibility === 'public' ? 'public' : 'private',
       description: str(req.body.description),
@@ -95,7 +95,7 @@ app.post(
   '/api/repos/new',
   route((req) =>
     swarm.createRepo(str(req.body.name).trim(), {
-      ...floorOptions(req),
+      ...projectOptions(req),
       description: str(req.body.description),
       visibility: req.body.visibility === 'public' ? 'public' : 'private',
       owner: str(req.body.owner).trim() || undefined,
@@ -113,9 +113,9 @@ app.post(
   })),
 );
 app.post('/api/repos/:repo/issues/:n/close', route((req) => swarm.closeIssueByManager(repoId(req), num(req.params.n))));
-app.post('/api/repos/:repo/plan', route((req) => swarm.planFloor(repoId(req), typeof req.body?.mission === 'string' ? req.body.mission : undefined)));
-app.post('/api/repos/:repo/onboard', route((req) => swarm.onboardFloor(repoId(req))));
-// The floor's app, for the preview monitor
+app.post('/api/repos/:repo/plan', route((req) => swarm.planProject(repoId(req), typeof req.body?.mission === 'string' ? req.body.mission : undefined)));
+app.post('/api/repos/:repo/onboard', route((req) => swarm.onboardProject(repoId(req))));
+// The project's app, for the preview monitor
 app.post(
   '/api/repos/:repo/preview',
   route((req) => {
@@ -125,7 +125,7 @@ app.post(
   }),
 );
 app.delete('/api/repos/:repo/preview', route((req) => swarm.stopPreview(repoId(req))));
-// The PR theatre: open PRs running beside the floor's app, and what the app viewer has on screen
+// The PR theatre: open PRs running beside the project's app, and what the app viewer has on screen
 app.post('/api/repos/:repo/pr-previews/:n', route((req) => swarm.startPrPreview(repoId(req), num(req.params.n), req.body?.restart === true)));
 app.delete('/api/repos/:repo/pr-previews/:n', route((req) => swarm.stopPrPreview(repoId(req), num(req.params.n))));
 app.post(
@@ -296,8 +296,8 @@ app.post(
   ),
 );
 app.post('/api/requests/:id/reject', route((req) => swarm.rejectRequest(String(req.params.id), str(req.body?.note))));
-// The demo office only: the CEO grows (or shrinks) a floor's team on demand.
-app.post('/api/demo/proposals', route((req) => swarm.demoPropose(req.body?.kind, req.body?.floor)));
+// The demo office only: the CEO grows (or shrinks) a project's team on demand.
+app.post('/api/demo/proposals', route((req) => swarm.demoPropose(req.body?.kind, req.body?.project)));
 
 // Serve the built client: the published package, or `npm start` after `npm run build`.
 const dist = path.resolve(import.meta.dirname, '../dist');
@@ -340,7 +340,7 @@ server.on('upgrade', (req, socket, head) => {
 server.listen(PORT, HOST, () => {
   const port = (server.address() as AddressInfo).port;
   setOfficeUrl(`http://${localAddress(HOST)}:${port}`);
-  const scale = DEMO_SCALE ? `, ${DEMO_SCALE.floors} floors × ${DEMO_SCALE.agents} people` : '';
+  const scale = DEMO_SCALE ? `, ${DEMO_SCALE.projects} projects × ${DEMO_SCALE.agents} people` : '';
   const shown = localAddress(HOST) === '127.0.0.1' ? 'localhost' : localAddress(HOST);
   console.log(`\n  🏭 factory ${VERSION} on http://${shown}:${PORT}${DEMO ? `  (DEMO MODE: fake GitHub + fake agents${scale})` : ''}`);
   if (!isLoopback(HOST)) {
@@ -348,17 +348,19 @@ server.listen(PORT, HOST, () => {
     console.log(`     ⚠ listening on ${HOST}: anyone who can reach this machine can use the office and its agents, with no sign-in`);
   }
   console.log(`     state: ${STATE_FILE}`);
+  const note = DEMO ? demoScaleNote(process.argv, process.env) : null;
+  if (note) console.log(`     ⚠ ${note}`);
   console.log(`     workspaces: ${WORKSPACE_ROOT}`);
   console.log(`     agents' machines: ${DEMO ? '(pretend ones, in the demo)' : MACHINES_DIR}\n`);
 });
 
-// Floors' apps don't outlive the office. (A hard kill skips this; the next start clears the orphans.) Agents' CLIs
+// Projects' apps don't outlive the office. (A hard kill skips this; the next start clears the orphans.) Agents' CLIs
 // carry on through a restart and stop when the office quits.
 let closing = false;
 const shutdown = (signal: string) => {
   if (closing) return;
   closing = true;
-  console.log(`\n  ${signal}: stopping floor previews…`);
+  console.log(`\n  ${signal}: stopping project previews…`);
   const force = setTimeout(() => process.exit(0), 15_000);
   void swarm
     .shutdown(signal === 'restart')

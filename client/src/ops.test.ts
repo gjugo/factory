@@ -23,7 +23,7 @@ describe('formatting', () => {
     expect(fmtUsd(123.4)).toBe('$123');
   });
 
-  it("puts a floor's numbers on one line for its sign", () => {
+  it("puts a project's numbers on one line for its sign", () => {
     expect(signLine({ ...EMPTY_NUMBERS, mergedToday: 3, leadMs: 102 * MIN, ciPass: 0.92, costToday: 4.2 })).toBe('🚀 3 today · ⏱ 1h 42m lead · ✅ CI 92% · 💵 ~$4.20');
   });
 });
@@ -51,7 +51,7 @@ describe('usage', () => {
 });
 
 describe('newAlarms', () => {
-  const alarm = (id: string): OpsAlarm => ({ id, kind: 'pr', repoId: 'o/a', floor: 1, prNumber: 1, agentId: null, text: '', since: NOW });
+  const alarm = (id: string): OpsAlarm => ({ id, kind: 'pr', repoId: 'o/a', project: 1, prNumber: 1, agentId: null, text: '', since: NOW });
   it('sounds only for alarms that just appeared', () => {
     expect(newAlarms([], [alarm('a')]).map((a) => a.id)).toEqual(['a']);
     expect(newAlarms([alarm('a')], [alarm('a'), alarm('b')]).map((a) => a.id)).toEqual(['b']);

@@ -27,7 +27,7 @@ describe('speechText', () => {
   });
 
   it('cuts at a sentence end after about 1500 characters', () => {
-    const sentence = 'The floor shipped another feature today. ';
+    const sentence = 'The project shipped another feature today. ';
     const long = sentence.repeat(60);
     const out = speechText(long);
     expect(out.length).toBeLessThanOrEqual(SPEECH_MAX_CHARS);

@@ -88,11 +88,11 @@ describe('pickTester', () => {
   });
 
   it('lets the author test it when nobody else can, or nobody else came free for a while', () => {
-    expect(pickTester([ada], 'ada', new Set(), false, 0)).toBe(ada); // a one-agent floor never stalls
+    expect(pickTester([ada], 'ada', new Set(), false, 0)).toBe(ada); // a one-agent project never stalls
     expect(pickTester([ada], 'ada', new Set(), true, SELF_QA_WAIT_MS)).toBe(ada);
   });
 
-  it('has nobody to pick from an empty floor', () => {
+  it('has nobody to pick from an empty project', () => {
     expect(pickTester([], 'ada', new Set(), false, SELF_QA_WAIT_MS)).toBeNull();
   });
 });

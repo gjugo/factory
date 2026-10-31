@@ -1,6 +1,6 @@
 import { Folder, FolderGit2, GitBranch, Loader2, Search, Sparkles } from 'lucide-react';
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
-import { api, type FloorOptions } from '@/api';
+import { api, type ProjectOptions } from '@/api';
 import { confirmDialog } from '@/components/shared/confirm-dialog';
 import { Notice } from '@/components/shared/notice';
 import { ToneBadge } from '@/components/shared/status-badge';
@@ -32,7 +32,7 @@ export function AddProjectDialog({ open, onOpenChange, onAdded }: { open: boolea
   const [mission, setMission] = useState('');
   const [autoAssign, setAutoAssign] = useState(true);
   const ids = useId();
-  const floor: FloorOptions = { mission: mission.trim(), autoAssign };
+  const project: ProjectOptions = { mission: mission.trim(), autoAssign };
   const done = (repo: RepoView) => {
     setMission('');
     onOpenChange(false);
@@ -84,13 +84,13 @@ export function AddProjectDialog({ open, onOpenChange, onAdded }: { open: boolea
             </TabsTrigger>
           </TabsList>
           <TabsContent value="github" className="pt-2">
-            <GithubMode floor={floor} onDone={done} />
+            <GithubMode project={project} onDone={done} />
           </TabsContent>
           <TabsContent value="folder" className="pt-2">
-            <FolderMode floor={floor} onDone={done} />
+            <FolderMode project={project} onDone={done} />
           </TabsContent>
           <TabsContent value="new" className="pt-2">
-            <NewMode floor={floor} onDone={done} />
+            <NewMode project={project} onDone={done} />
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -110,7 +110,7 @@ function ListMessage({ children }: { children: ReactNode }) {
   return <li className="p-3 text-sm text-muted-foreground">{children}</li>;
 }
 
-function GithubMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoView) => void }) {
+function GithubMode({ project, onDone }: { project: ProjectOptions; onDone: (r: RepoView) => void }) {
   const repos = useStore((s) => s.repos);
   const projectsDir = useStore((s) => s.settings.projectsDir);
   const [list, setList] = useState<GhRepoSummary[] | null>(null);
@@ -133,7 +133,7 @@ function GithubMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoVi
   const shown = repoChoices(list ?? [], repos.map((r) => r.id), q);
   const connect = async (name: string) => {
     setBusy(name);
-    const repo = await attempt(() => api.connectRepo(name, floor));
+    const repo = await attempt(() => api.connectRepo(name, project));
     setBusy(null);
     if (repo) onDone(repo);
   };
@@ -213,7 +213,7 @@ function GithubMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoVi
   );
 }
 
-function FolderMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoView) => void }) {
+function FolderMode({ project, onDone }: { project: ProjectOptions; onDone: (r: RepoView) => void }) {
   const projectsDir = useStore((s) => s.settings.projectsDir);
   const [dir, setDir] = useState(projectsDir);
   const [root, setRoot] = useState('');
@@ -247,7 +247,7 @@ function FolderMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoVi
       body: `This creates a ${visibility} GitHub repository called ${projectSlug(f.name) || f.name} and pushes what's already committed. Nothing uncommitted leaves your computer.${f.git ? '' : ' An empty folder gets a starter README first.'}`,
       confirm: `Create ${visibility} repo`,
     });
-    if (ok) void run(f, () => api.publishFolder({ path: f.path, visibility, ...floor }));
+    if (ok) void run(f, () => api.publishFolder({ path: f.path, visibility, ...project }));
   };
   return (
     <div className="grid gap-3">
@@ -289,13 +289,13 @@ function FolderMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoVi
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{f.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {action === 'added' ? `Already project ${f.floor}` : f.github ? f.github : f.git ? 'Not on GitHub yet' : 'Not a git repository yet'}
+                  {action === 'added' ? `Already project ${f.number}` : f.github ? f.github : f.git ? 'Not on GitHub yet' : 'Not a git repository yet'}
                 </p>
               </div>
               {action === 'added' ? (
                 <ToneBadge tone="success" label="Added" />
               ) : action === 'connect' ? (
-                <Button size="sm" disabled={!!busy} onClick={() => void run(f, () => api.connectFolder(f.path, floor))} aria-label={`Connect ${f.name}`}>
+                <Button size="sm" disabled={!!busy} onClick={() => void run(f, () => api.connectFolder(f.path, project))} aria-label={`Connect ${f.name}`}>
                   {busy === f.path && <Loader2 className="animate-spin" aria-hidden />}
                   Connect
                 </Button>
@@ -334,7 +334,7 @@ function VisibilityChoice({ value, onChange }: { value: Visibility; onChange: (v
   );
 }
 
-function NewMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoView) => void }) {
+function NewMode({ project, onDone }: { project: ProjectOptions; onDone: (r: RepoView) => void }) {
   const projectsDir = useStore((s) => s.settings.projectsDir);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -349,7 +349,7 @@ function NewMode({ floor, onDone }: { floor: FloorOptions; onDone: (r: RepoView)
     if (!slug) return setError('Give the project a name with at least one letter or number.');
     setError(null);
     setBusy(true);
-    const repo = await attempt(() => api.createRepo({ name: slug, description: description.trim(), visibility, owner: owner.trim() || undefined, ...floor }));
+    const repo = await attempt(() => api.createRepo({ name: slug, description: description.trim(), visibility, owner: owner.trim() || undefined, ...project }));
     setBusy(false);
     if (repo) onDone(repo);
   };

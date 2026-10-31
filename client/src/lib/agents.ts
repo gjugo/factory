@@ -155,7 +155,7 @@ export const statusMatches = (status: AgentStatus, f: StatusFilter) => f === 'al
 export interface AgentGroups {
   /** The CEO, pinned on top; null when filtered out (another project picked, or its status doesn't match). */
   ceo: Agent | null;
-  /** Each project (by floor) with its agents (by desk) that pass the filter. */
+  /** Each project (by number) with its agents (by desk) that pass the filter. */
   projects: { repo: RepoView; agents: Agent[] }[];
 }
 
@@ -168,7 +168,7 @@ export function groupAgents(agents: Record<string, Agent>, repos: readonly RepoV
   const ceoAgent = all.find((a) => a.role === 'ceo') ?? null;
   const ceo = ceoAgent && (!project || project === 'ceo') && statusMatches(ceoAgent.status, status) ? ceoAgent : null;
   const projects = [...repos]
-    .sort((a, b) => a.floor - b.floor)
+    .sort((a, b) => a.number - b.number)
     .filter((r) => !project || project === r.id)
     .map((repo) => ({
       repo,

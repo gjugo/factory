@@ -42,7 +42,7 @@ describe('signing cloud agents in', () => {
     expect(agent(ada.id).needsSignIn).toBe(true);
     expect(agent(ada.id).terminal).toBe(true);
 
-    // The floor hands out work, but not to someone waiting to be signed in.
+    // The project hands out work, but not to someone waiting to be signed in.
     swarm.updateRepo(repo.id, { autoAssign: true });
     await vi.advanceTimersByTimeAsync(5_000);
     expect(agent(ada.id).status).toBe('idle');

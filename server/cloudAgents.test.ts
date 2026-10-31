@@ -42,7 +42,7 @@ describe('where agents work', () => {
     swarm.updateSettings({ cloud: { machineKind: 'box', boxSize: 'small', boxLimit: 1 } });
     swarm.hireAgent(repo.id, { name: 'Ada', strict: true });
     expect(() => swarm.hireAgent(repo.id, { name: 'Bo', strict: true })).toThrow(/Box limit \(1\)/);
-    // A floor's own first agent isn't refused: they work on this computer instead.
+    // A project's own first agent isn't refused: they work on this computer instead.
     expect(swarm.hireAgent(repo.id, { name: 'Cy' }).host).toBe('local');
   });
 

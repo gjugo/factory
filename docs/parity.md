@@ -361,7 +361,7 @@ name suggestions in setup, and the P / L / M / H-? keys with their shortcuts dia
    (size and background), and Reset. Touches `index.css` tokens, `lib/status.ts` and `StatusDot`/`StatusBadge`. No
    server routes (unless kept in `settings.ui`: `PATCH /api/settings`, plus a field in `uiSettings`).
 2. **Per-project QA wait, CI and cost today.** Overview → projects table: three more sortable columns (hidden on small
-   screens), QA wait, CI pass and Cost today, from what each `OpsFloor` in the snapshot already carries (`qaWaitMs`,
+   screens), QA wait, CI pass and Cost today, from what each `OpsProject` in the snapshot already carries (`qaWaitMs`,
    `ciPass` / `ciRuns`, `costToday`). Client only (`pages/overview/overview.ts` sort keys, `projects-table.tsx`); no new
    routes. Left out to keep this PR at about ten fixes.
 3. **Rebindable keys.** Settings → a Keyboard card: rebind P, L, M, H and the talk key V (two slots each, Esc cancels,

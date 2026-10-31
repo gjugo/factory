@@ -1,4 +1,4 @@
-// Types shared between the swarm server and the 3D client.
+// Types shared between the swarm server and the dashboard.
 import type { CareerView } from './careers.ts';
 
 import type { UiSettings } from './ui.ts';
@@ -61,18 +61,18 @@ export interface RepoView {
   description: string;
   url: string;
   defaultBranch: string;
-  floor: number; // 1-based floor number in the building
-  color: string; // accent color for the floor
+  number: number; // 1-based project number: the projects' order, and the preview port's offset
+  color: string; // accent color for the project
   autoAssign: boolean;
   autoMerge: boolean; // PRs merge themselves once QA passes and GitHub's checks are green
-  folderSync: string | null; // how the floor's main checkout stands against GitHub: "in sync", "updated to abc1234", "2 behind: local changes" …
+  folderSync: string | null; // how the project's main checkout stands against GitHub: "in sync", "updated to abc1234", "2 behind: local changes" …
   browserTesting: boolean;
-  links: string[]; // ids of related repos this floor's agents can read for context
-  mission: string; // the manager's brief: what this floor is building
+  links: string[]; // ids of related repos this project's agents can read for context
+  mission: string; // the manager's brief: what this project is building
   summary: string; // the CEO's one-line read of the project, e.g. "3D browser game · Three.js + Vite"
   qaBrief: string; // how QA should test this kind of project (written by the CEO, editable)
-  localPath: string | null; // the manager's own project folder, when the floor lives in one
-  checkoutPath: string; // where the floor's main checkout is on disk (localPath, or a clone the office manages)
+  localPath: string | null; // the manager's own project folder, when the project lives in one
+  checkoutPath: string; // where the project's main checkout is on disk (localPath, or a clone the office manages)
   cloneStatus: 'pending' | 'cloning' | 'ready' | 'error';
   cloneError?: string;
   issues: IssueInfo[]; // open issues
@@ -85,7 +85,7 @@ export interface RepoView {
 }
 
 /**
- * How a floor's app is run for the preview monitor. {port} and {tmp} are replaced in the command and env values;
+ * How a project's app is run for the preview monitor. {port} and {tmp} are replaced in the command and env values;
  * PORT={port} is always set. command null: npm run dev, else start, else preview from package.json.
  */
 export interface PreviewConfig {
@@ -102,7 +102,7 @@ export type PreviewStatus =
   | 'running'
   | 'error';
 
-/** The floor's running app, served from its own worktree on a port reserved for the floor. */
+/** The project's running app, served from its own worktree on a port reserved for the project. */
 export interface PreviewView {
   status: PreviewStatus;
   port: number;
@@ -116,7 +116,7 @@ export interface PreviewView {
 }
 
 /**
- * An open PR's app in the PR theatre: run beside the floor's main preview, from a worktree of its own, until nobody
+ * An open PR's app in the PR theatre: run beside the project's main preview, from a worktree of its own, until nobody
  * has watched it for a while, its PR merges or closes, or the office stops.
  */
 export interface PrPreviewView {
@@ -133,22 +133,22 @@ export interface PrPreviewView {
   logTail: string[]; // the last 40 lines of install / app output
 }
 
-/** A folder in the manager's projects folder, as offered when adding a floor. */
+/** A folder in the manager's projects folder, as offered when adding a project. */
 export interface ProjectFolderView {
   name: string;
   path: string;
   git: boolean;
   github: string | null; // owner/name of its GitHub origin
-  floor: number | null; // already a floor in the office
+  number: number | null; // already a project in the office
 }
 
-/** Every agent on a floor is the same kind of worker (docs/agents.md); the one CEO works in the lobby and runs the company. */
+/** Every agent on a project is the same kind of worker (docs/agents.md); the one CEO runs the company. */
 export type AgentRole = 'agent' | 'ceo';
 
-/** Desks in a floor's room: 12 in the open-plan grid and 3 along the east wall. A team is at most this big. */
-export const FLOOR_SEATS = 15;
+/** Desks a project has: a team is at most this big. */
+export const PROJECT_SEATS = 15;
 
-/** A floor's most agents unless the manager changes it (Settings). */
+/** A project's most agents unless the manager changes it (Settings). */
 export const DEFAULT_MAX_AGENTS = 10;
 
 /** Fixed id of the CEO agent. */
@@ -236,7 +236,7 @@ export interface AgentView {
   role: AgentRole;
   look: AgentLook;
   task: AgentTask | null;
-  desk: number; // desk slot on the floor, 0 to FLOOR_SEATS - 1
+  desk: number; // desk slot on the project, 0 to PROJECT_SEATS - 1
   color: string; // shirt color
   hair: string; // hair color
   skin: string;
@@ -277,7 +277,7 @@ export interface AgentActivity {
   detail: string;
 }
 
-/** One line on a floor's activity ticker ("Ken opened PR #212"), worked out by the server from what changed. */
+/** One line on a project's activity ticker ("Ken opened PR #212"), worked out by the server from what changed. */
 export interface TickerItem {
   id: number;
   repoId: string;
@@ -343,8 +343,8 @@ export interface SwarmSettings {
   defaultEffort: EffortLevel;
   runtime: AgentRuntime;
   defaultCli: AgentCli; // what agents run in their terminals unless they have their own
-  scaling: 'approve' | 'auto'; // the CEO's team changes wait for the manager (new agents wait in the lobby), or apply at once
-  maxAgents: number; // most agents on a floor: 1 to FLOOR_SEATS (DEFAULT_MAX_AGENTS)
+  scaling: 'approve' | 'auto'; // the CEO's team changes wait for the manager (new agents wait for them), or apply at once
+  maxAgents: number; // most agents on a project: 1 to PROJECT_SEATS (DEFAULT_MAX_AGENTS)
   ceoHeartbeatMin: number; // minutes between the CEO's periodic reviews; 0 = off
   managerName: string; // what the office calls you
   companyName: string;
@@ -446,7 +446,7 @@ export interface UsageView {
   warning: UsageWarningView | null; // the latest since the office started, for the usage meter
 }
 
-/** One floor's numbers on mission control (or the whole office's), computed by the server from its state and history. */
+/** One project's numbers on mission control (or the whole office's), computed by the server from its state and history. */
 export interface OpsNumbers {
   // the pipeline, right now
   ready: number; // backlog issues that can start
@@ -475,9 +475,9 @@ export interface OpsNumbers {
   costToday: number; // dollars since midnight from finished sessions' reported cost: an estimate
 }
 
-export interface OpsFloor extends OpsNumbers {
+export interface OpsProject extends OpsNumbers {
   repoId: string;
-  floor: number;
+  number: number;
   alarms: number;
 }
 
@@ -486,16 +486,16 @@ export interface OpsAlarm {
   id: string; // "pr:<repo>#<n>" or "agent:<id>": the manager's console opens at this card
   kind: 'pr' | 'agent';
   repoId: string;
-  floor: number;
+  project: number;
   prNumber: number | null;
   agentId: string | null;
   text: string;
   since: number;
 }
 
-/** Mission control: every floor's numbers, the office's total, and what needs the manager (oldest first). */
+/** Mission control: every project's numbers, the office's total, and what needs the manager (oldest first). */
 export interface OpsView {
-  floors: OpsFloor[];
+  projects: OpsProject[];
   total: OpsNumbers;
   ceoCostToday: number;
   alarms: OpsAlarm[];
@@ -533,7 +533,7 @@ export interface OfficeUpdateView {
 }
 
 /**
- * One change to a floor's team: a new agent (they wait in the lobby, where the manager can set them up before they're
+ * One change to a project's team: a new agent (they wait, and the manager can set them up before they're
  * created) or an agent leaving. The CEO's scale_team makes them; with scaling on auto they're decided at once.
  */
 export interface HireRequestView {
@@ -592,7 +592,7 @@ export interface WorldSnapshot {
   ceo: CeoInfo;
   messages: PhoneMessage[];
   phoneReadAt: number; // CEO messages newer than this are unread
-  version?: string; // the cubefarm version the server runs (package.json)
+  version?: string; // the factory version the server runs (package.json)
   officeCommit?: string | null; // short sha the server started on (absent on servers without self-update)
   officeUpdate?: OfficeUpdateView;
   usage: UsageView;
@@ -602,20 +602,20 @@ export interface WorldSnapshot {
   voiceKeySet: boolean; // an ElevenLabs key is saved (the key itself never leaves the server)
   voiceKeyHint: string; // its last 4 characters, '' when none
   voiceCache: VoiceCacheView;
-  ticker?: TickerItem[]; // the floors' recent ticker lines, oldest first
+  ticker?: TickerItem[]; // the projects' recent ticker lines, oldest first
   notifyChannels: NotifyChannelsView;
   cloud?: CloudView; // Settings → Cloud agents: the Upstash account and the credentials cloud agents use
 }
 
 /** What changed about an agent since the office last sent it, with its id; every field for one it never sent. */
 export type AgentPatch = Partial<Omit<AgentView, 'log'>> & { id: string };
-/** The same for a floor. */
+/** The same for a project. */
 export type RepoPatch = Partial<RepoView> & { id: string };
 
 export type ServerEvent =
   | { type: 'snapshot'; data: WorldSnapshot }
   | { type: 'repo'; repo: RepoView }
-  /** Floor changes batched by the office (server/outbox.ts), like agents'. */
+  /** Project changes batched by the office (server/outbox.ts), like agents'. */
   | { type: 'repos'; repos: RepoPatch[] }
   | { type: 'repoRemoved'; repoId: string }
   | { type: 'agent'; agent: Omit<AgentView, 'log'> }
@@ -651,8 +651,8 @@ export type ServerEvent =
 
 /** What a tab shows of the agents' terminals, so the office sends it only those lines (shared/watch.ts). */
 export interface Watch {
-  /** The floor the tab is on (0: the lobby, where the CEO sits); -1 before it has said. */
-  floor: number;
+  /** The project the tab is on (0: the CEO's); -1 before it has said. */
+  project: number;
   /** Agents whose panel is open (their terminal, the CEO's in the console). */
   agents: string[];
   /** The workers list is showing: the latest line of every agent. */

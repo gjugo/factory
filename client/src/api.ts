@@ -50,19 +50,19 @@ export interface AgentSetupPatch {
 }
 
 /** Choices made when a project moves in: a brief for the CEO, and whether work starts on its own. */
-export interface FloorOptions {
+export interface ProjectOptions {
   mission?: string;
   autoAssign?: boolean;
 }
 
 export const api = {
   githubRepos: (owner?: string) => call<GhRepoSummary[]>('GET', `/api/github/repos${owner ? `?owner=${encodeURIComponent(owner)}` : ''}`),
-  connectRepo: (fullName: string, floor: FloorOptions = {}) => call<RepoView>('POST', '/api/repos', { fullName, ...floor }),
-  createRepo: (body: FloorOptions & { name: string; description: string; visibility: 'private' | 'public'; owner?: string }) =>
+  connectRepo: (fullName: string, project: ProjectOptions = {}) => call<RepoView>('POST', '/api/repos', { fullName, ...project }),
+  createRepo: (body: ProjectOptions & { name: string; description: string; visibility: 'private' | 'public'; owner?: string }) =>
     call<RepoView>('POST', '/api/repos/new', body),
   folders: (dir?: string) => call<{ root: string; folders: ProjectFolderView[] }>('GET', `/api/folders${dir ? `?dir=${encodeURIComponent(dir)}` : ''}`),
-  connectFolder: (path: string, floor: FloorOptions = {}) => call<RepoView>('POST', '/api/folders/connect', { path, ...floor }),
-  publishFolder: (body: FloorOptions & { path: string; name?: string; visibility: 'private' | 'public'; description?: string }) =>
+  connectFolder: (path: string, project: ProjectOptions = {}) => call<RepoView>('POST', '/api/folders/connect', { path, ...project }),
+  publishFolder: (body: ProjectOptions & { path: string; name?: string; visibility: 'private' | 'public'; description?: string }) =>
     call<RepoView>('POST', '/api/folders/publish', body),
   setup: (body: { managerName: string; companyName: string; scaling: SwarmSettings['scaling']; ceoName: string; ceoLook: 'feminine' | 'masculine'; ceoColor: string }) =>
     call<SwarmSettings>('POST', '/api/setup', body),
@@ -93,14 +93,14 @@ export const api = {
   syncFolder: (repoId: string) => call<{ folderSync: string | null }>('POST', `${r(repoId)}/sync-folder`),
   createIssue: (repoId: string, title: string, body: string, assignTo?: string) => call<{ number: number }>('POST', `${r(repoId)}/issues`, { title, body, assignTo }),
   closeIssue: (repoId: string, n: number) => call('POST', `${r(repoId)}/issues/${n}/close`),
-  planFloor: (repoId: string, mission?: string) => call('POST', `${r(repoId)}/plan`, { mission }),
-  onboardFloor: (repoId: string) => call('POST', `${r(repoId)}/onboard`),
+  planProject: (repoId: string, mission?: string) => call('POST', `${r(repoId)}/plan`, { mission }),
+  onboardProject: (repoId: string) => call('POST', `${r(repoId)}/onboard`),
   mergePull: (repoId: string, n: number, method: 'squash' | 'merge' | 'rebase' = 'squash') => call('POST', `${r(repoId)}/pulls/${n}/merge`, { method }),
   closePull: (repoId: string, n: number) => call('POST', `${r(repoId)}/pulls/${n}/close`),
   /** Queues the PR for QA; with `agentId`, that (free) agent tests it now. */
   sendToQa: (repoId: string, n: number, agentId?: string) => call('POST', `${r(repoId)}/pulls/${n}/qa`, agentId ? { agentId } : {}),
   sendBack: (repoId: string, n: number, note?: string) => call('POST', `${r(repoId)}/pulls/${n}/fix`, { note }),
-  /** A new agent on the floor (refused past Settings → Most agents per floor). Empty settings use the office's defaults. */
+  /** A new agent on the project (refused past Settings → Most agents per project). Empty settings use the office's defaults. */
   hireAgent: (repoId: string, opts: AgentSetupPatch & { name?: string } = {}) => call<AgentView>('POST', `${r(repoId)}/agents`, opts),
   updateAgent: (id: string, patch: AgentSetupPatch & { name?: string; look?: 'feminine' | 'masculine'; style?: AgentStyle | null }) => call('PATCH', `/api/agents/${id}`, patch),
   fireAgent: (id: string) => call('DELETE', `/api/agents/${id}`),
@@ -134,7 +134,7 @@ export const api = {
   approveRequest: (id: string, overrides: AgentSetupPatch & { name?: string; note?: string } = {}) => call('POST', `/api/requests/${id}/approve`, overrides),
   rejectRequest: (id: string, note?: string) => call('POST', `/api/requests/${id}/reject`, { note }),
   /** Demo office only: the CEO asks for a new agent (or for one to leave) on demand. */
-  demoPropose: (kind: 'hire' | 'let-go', floor?: number) => call<{ text: string }>('POST', '/api/demo/proposals', { kind, floor }),
+  demoPropose: (kind: 'hire' | 'let-go', project?: number) => call<{ text: string }>('POST', '/api/demo/proposals', { kind, project }),
   /** Saves (or with '' removes) the ElevenLabs key. No toast: the settings show why a key was rejected. */
   setVoiceKey: (key: string) => call<{ voiceKeySet: boolean; voiceKeyHint: string }>('PUT', '/api/voice/key', { key }, false),
   voices: () => call<VoiceOption[]>('GET', '/api/voice/voices'),

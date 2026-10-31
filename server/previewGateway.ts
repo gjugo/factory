@@ -38,8 +38,8 @@ export function gatewayLocation(location: string, port: number): string {
  * Runs first on a gateway page: until the preview worker controls it, the page stops loading, the worker is
  * registered and the page loads again under it. Twice at most, then the page shows as it is.
  */
-export const BOOT_SCRIPT = `<script data-cubefarm-preview>(function(){
-var w=navigator.serviceWorker,k='cubefarm-preview-boot',s;if(!w)return;try{s=sessionStorage}catch(e){return}
+export const BOOT_SCRIPT = `<script data-factory-preview>(function(){
+var w=navigator.serviceWorker,k='factory-preview-boot',s;if(!w)return;try{s=sessionStorage}catch(e){return}
 var c=w.controller;if(c&&/\\/preview\\/sw\\.js$/.test(c.scriptURL)){s.removeItem(k);return}
 var n=+(s.getItem(k)||0);if(n>1){s.removeItem(k);return}s.setItem(k,String(n+1));
 function go(){location.reload()}
@@ -50,7 +50,7 @@ i.addEventListener('statechange',function(){if(i.state==='activated'||i.state===
 
 /** The page with the boot script at the very top of its head (or of the page, when it has none). */
 export function injectBoot(html: string): string {
-  if (html.includes('data-cubefarm-preview')) return html;
+  if (html.includes('data-factory-preview')) return html;
   const head = html.match(/<head(\s[^>]*)?>/i);
   if (head?.index !== undefined) return html.slice(0, head.index + head[0].length) + BOOT_SCRIPT + html.slice(head.index + head[0].length);
   const doctype = html.match(/^\s*<!doctype[^>]*>/i);
@@ -59,7 +59,7 @@ export function injectBoot(html: string): string {
 }
 
 /** The preview worker, served at GATEWAY_WORKER. It only sees pages under /preview/ and the requests they make. */
-export const WORKER_SOURCE = `// cubefarm's preview worker (server/previewGateway.ts): keeps a preview's root paths under its /preview/<port>/.
+export const WORKER_SOURCE = `// factory's preview worker (server/previewGateway.ts): keeps a preview's root paths under its /preview/<port>/.
 const MOUNT = /^\\/preview\\/\\d{1,5}(?=\\/)/;
 const mounts = new Map(); // client id -> its mount, kept when the app moves its address with pushState
 

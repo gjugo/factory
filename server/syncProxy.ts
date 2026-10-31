@@ -10,15 +10,15 @@ import type { AddressInfo } from 'node:net';
 // preview gateway (/preview/<port>/, server/previewGateway.ts), the script reports and follows paths without that prefix.
 
 /** Reports scroll and path changes to the viewer; mirrors the other side's. Ignores itself outside a frame. */
-export const SYNC_SCRIPT = `<script data-cubefarm-sync>(function(){
-if(window.parent===window||window.__cubefarmSync)return;window.__cubefarmSync=1;
+export const SYNC_SCRIPT = `<script data-factory-sync>(function(){
+if(window.parent===window||window.__factorySync)return;window.__factorySync=1;
 var hold=0,M=(location.pathname.match(/^\\/preview\\/\\d{1,5}(?=\\/)/)||[''])[0];
 function where(){var p=location.pathname;return(M&&p.indexOf(M)===0?p.slice(M.length):p)+location.search+location.hash}
-function send(kind){try{parent.postMessage({cubefarmSync:kind,x:scrollX,y:scrollY,path:where()},'*')}catch(e){}}
+function send(kind){try{parent.postMessage({factorySync:kind,x:scrollX,y:scrollY,path:where()},'*')}catch(e){}}
 addEventListener('scroll',function(){if(Date.now()>hold)send('scroll')},{passive:true});
-addEventListener('message',function(e){var d=e.data;if(e.source!==parent||!d||!d.cubefarmSyncTo)return;
-if(d.cubefarmSyncTo==='scroll'){hold=Date.now()+200;scrollTo(d.x,d.y)}
-else if(d.cubefarmSyncTo==='path'&&typeof d.path==='string'&&d.path.charAt(0)==='/'&&d.path.charCodeAt(1)!==47&&d.path.charCodeAt(1)!==92&&d.path!==where())location.assign(M+d.path)});
+addEventListener('message',function(e){var d=e.data;if(e.source!==parent||!d||!d.factorySyncTo)return;
+if(d.factorySyncTo==='scroll'){hold=Date.now()+200;scrollTo(d.x,d.y)}
+else if(d.factorySyncTo==='path'&&typeof d.path==='string'&&d.path.charAt(0)==='/'&&d.path.charCodeAt(1)!==47&&d.path.charCodeAt(1)!==92&&d.path!==where())location.assign(M+d.path)});
 ['pushState','replaceState'].forEach(function(k){var f=history[k];history[k]=function(){var r=f.apply(this,arguments);send('path');return r}});
 addEventListener('popstate',function(){send('path')});addEventListener('hashchange',function(){send('path')});
 if(document.readyState==='loading')addEventListener('DOMContentLoaded',function(){send('path')});else send('path');
@@ -26,7 +26,7 @@ if(document.readyState==='loading')addEventListener('DOMContentLoaded',function(
 
 /** The page with the sync script at the top of its head (or of the page, when it has none). */
 export function injectSync(html: string): string {
-  if (html.includes('data-cubefarm-sync')) return html;
+  if (html.includes('data-factory-sync')) return html;
   const head = html.match(/<head(\s[^>]*)?>/i);
   if (head?.index !== undefined) return html.slice(0, head.index + head[0].length) + SYNC_SCRIPT + html.slice(head.index + head[0].length);
   const doctype = html.match(/^\s*<!doctype[^>]*>/i);

@@ -5,7 +5,7 @@ import { StatusDot } from '@/components/shared/status-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { projectName } from '@/hooks/use-project-rows';
 import { isBusyStatus } from '@/lib/agents';
-import { agentsOnRepo, floorPrCounts, pendingRequests, useStore } from '@/store';
+import { agentsOnRepo, projectPrCounts, pendingRequests, useStore } from '@/store';
 import { todaysReport } from './overview';
 
 // Today's report: the office in a few sentences, most urgent first (cubefarm's phone Company tab).
@@ -22,7 +22,7 @@ export function ReportCard() {
   const lines = useMemo(() => {
     const projects = repos.map((r) => {
       const team = agentsOnRepo(agents, r.id).filter((a) => a.role !== 'ceo');
-      const counts = floorPrCounts(r, qa);
+      const counts = projectPrCounts(r, qa);
       return {
         name: projectName(r),
         issues: r.issues.length,

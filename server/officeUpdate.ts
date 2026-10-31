@@ -118,7 +118,7 @@ export interface OfficeHost {
   launcher: boolean;
   /** Full sha of the commit the office runs, or null when it doesn't run from a git checkout (e.g. installed from npm). */
   head(): Promise<string | null>;
-  /** Is this floor checkout the office's own folder? Syncing it would restart the office mid-work, so it's only reported. */
+  /** Is this project checkout the office's own folder? Syncing it would restart the office mid-work, so it's only reported. */
   isOwnFolder(dir: string): boolean;
   /** Commits between two shas of the office's folder, or null when git can't tell. */
   commitsBetween(from: string, to: string): Promise<number | null>;

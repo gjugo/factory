@@ -66,7 +66,7 @@ describe('qaGate: conflicts before QA', () => {
     expect(qaGate(pull(CONFLICTING), record({ mergeFixes: MAX_MERGE_FIXES }), true)).toEqual({ do: 'send-back', needsHuman: true });
   });
 
-  it('updates a branch that is only behind, as the merge gate does (auto-merge floors)', () => {
+  it('updates a branch that is only behind, as the merge gate does (auto-merge projects)', () => {
     expect(qaGate(pull({ mergeState: 'BEHIND' }), record(), true)).toEqual({ do: 'update-branch' });
     expect(qaGate(pull({ mergeState: 'BEHIND' }), record(), false)).toEqual({ do: 'test' });
   });

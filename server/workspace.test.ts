@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// syncMain against real throwaway repos: a bare "origin", a clone of it as the floor's main checkout, and an
+// syncMain against real throwaway repos: a bare "origin", a clone of it as the project's main checkout, and an
 // "upstream" clone that pushes new work. Everything lives in one temp folder whose path has spaces in it.
 
 const npmRuns = vi.hoisted(() => [] as { cmd: string; cwd?: string }[]);
@@ -45,7 +45,7 @@ let edits = 0;
 
 interface Repos {
   fullName: string;
-  dir: string; // the floor's main checkout (mainDir)
+  dir: string; // the project's main checkout (mainDir)
   upstream: string; // someone else's clone, pushing to origin
 }
 
@@ -62,7 +62,7 @@ async function pushUpstream(r: Repos, n = 1, file = 'notes.txt') {
   await git(['push', '-q', 'origin', 'main'], { cwd: r.upstream });
 }
 
-/** `local`: the floor's checkout is a project folder of the manager's (setLocalPath), not a clone under the home. */
+/** `local`: the project's checkout is a project folder of the manager's (setLocalPath), not a clone under the home. */
 async function makeRepos(cloneArgs: string[] = [], local = false): Promise<Repos> {
   const n = ++seq;
   const fullName = `sync-test/repo-${n}`;
@@ -98,7 +98,7 @@ afterAll(async () => {
 
 describe('syncMain', { timeout: 60_000 }, () => {
   beforeAll(() => {
-    // The whole point: the floor's folder is under the temp SWARM_HOME, never a real office's.
+    // The whole point: the project's folder is under the temp SWARM_HOME, never a real office's.
     expect(mainDir('sync-test/repo-x').startsWith(path.join(ROOT, 'swarm home'))).toBe(true);
   });
 
@@ -271,7 +271,7 @@ describe('trimDesk', { timeout: 60_000 }, () => {
       () => false,
     );
 
-  /** A desk (a real worktree of the floor's checkout) with an install, build output and an untracked source file. */
+  /** A desk (a real worktree of the project's checkout) with an install, build output and an untracked source file. */
   async function deskWithOutput() {
     const r = await makeRepos();
     await commitFile(r.upstream, '.gitignore', 'node_modules/\ndist/\ntest-results/\n.swarm-home/\n');
@@ -537,7 +537,7 @@ describe('planSweep', () => {
           wt(path.join(oldDesks, 'ada-1'), 'swarm/issue-2-ada'), // a current agent's slug, but in the old home
           wt(path.join(desks, 'held-3'), 'swarm/issue-6-held', true), // locked by someone: left alone
           wt(path.join(top, 'projects', 'app-feature'), 'swarm/issue-7-manual'), // the manager's own worktree
-          wt(path.join(root, 'other__repo', 'desks', 'x'), 'swarm/issue-8-x'), // another floor's desk
+          wt(path.join(root, 'other__repo', 'desks', 'x'), 'swarm/issue-8-x'), // another project's desk
           wt(path.join(top, 'tmp', 'workspaces', 'me__app', 'desks', 'y')), // not under an office home
         ],
         branches: [
@@ -665,7 +665,7 @@ describe('sweepDesks', { timeout: 120_000 }, () => {
     expect(await sweepDesks('sync-test/nothing-here', { desks: [], branches: [] })).toEqual(nothing);
   });
 
-  it('lets a desk go from the project folder after the floor stopped pointing at it (a disconnect)', async () => {
+  it('lets a desk go from the project folder after the project stopped pointing at it (a disconnect)', async () => {
     const r = await makeRepos([], true);
     const desk = await prepareDesk(r.fullName, { defaultBranch: 'main' }, 'ada-1234', 'swarm/issue-9-ada');
     const main = mainDir(r.fullName);
@@ -682,13 +682,13 @@ describe("agents' machines", { timeout: 60_000 }, () => {
   const branches = async (cwd: string) => (await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], { cwd })).split(/\r?\n/).filter(Boolean).sort();
   const isDir = (p: string) => fs.stat(p).then((st) => st.isDirectory(), () => false);
 
-  it("works in a clone of its own, never a worktree of the floor's checkout", async () => {
+  it("works in a clone of its own, never a worktree of the project's checkout", async () => {
     const r = await makeRepos();
     const desk = await prepareMachineDesk('ada00001', r.fullName, { defaultBranch: 'main' }, 'swarm/issue-1-ada');
     expect(desk).toBe(machineDesk('ada00001', r.fullName));
     expect(await git(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: desk })).toBe('swarm/issue-1-ada');
     expect(await head(desk)).toBe(await originMain(r.dir));
-    expect(await worktrees(r.dir)).toEqual(await realPaths([r.dir])); // the floor's checkout knows nothing of it
+    expect(await worktrees(r.dir)).toEqual(await realPaths([r.dir])); // the project's checkout knows nothing of it
     expect(await git(['remote', 'get-url', 'origin'], { cwd: desk })).toBe(await git(['remote', 'get-url', 'origin'], { cwd: r.dir }));
     // borrowed objects are copied, not linked: the clone stands on its own
     const common = await git(['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: desk });

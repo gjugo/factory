@@ -156,7 +156,7 @@ describe('Voice', () => {
   let views: VoiceCacheView[];
   let clock: number;
   const messages: PhoneMessage[] = [
-    { id: 1, from: 'ceo', text: 'Floor 2 shipped #12 🎉', at: 0 },
+    { id: 1, from: 'ceo', text: 'Project 2 shipped #12 🎉', at: 0 },
     { id: 2, from: 'manager', text: 'thanks', at: 0 },
     { id: 3, from: 'ceo', text: 'Another one.', at: 0 },
   ];
@@ -199,7 +199,7 @@ describe('Voice', () => {
     });
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cubefarm-voice-'));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'factory-voice-'));
     settings = { ...DEFAULT_VOICE, provider: 'elevenlabs' };
     listen = { ...DEFAULT_LISTEN, provider: 'elevenlabs' };
     notes = [];
@@ -251,7 +251,7 @@ describe('Voice', () => {
   it('speaks CEO messages once, cached, and 404s for the rest', async () => {
     const v = make();
     await v.setKey('sk_good');
-    expect((await v.messageAudio(1)).toString()).toBe('mp3:Floor 2 shipped number 12.');
+    expect((await v.messageAudio(1)).toString()).toBe('mp3:Project 2 shipped number 12.');
     await v.messageAudio(1);
     expect(calls.synth).toBe(1);
     expect(await status(v.messageAudio(2))).toBe(404);

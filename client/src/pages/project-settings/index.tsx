@@ -127,8 +127,8 @@ function LinksCard({ repo }: { repo: RepoView }) {
             <legend className="sr-only">Linked projects</legend>
             {others.map((o) => (
               <div key={o.id} className="flex items-center gap-2">
-                <Checkbox id={`${id}-${o.floor}`} checked={repo.links.includes(o.id)} onCheckedChange={(v) => toggle(o.id, v === true)} />
-                <Label htmlFor={`${id}-${o.floor}`} className="min-w-0 truncate font-normal">
+                <Checkbox id={`${id}-${o.number}`} checked={repo.links.includes(o.id)} onCheckedChange={(v) => toggle(o.id, v === true)} />
+                <Label htmlFor={`${id}-${o.number}`} className="min-w-0 truncate font-normal">
                   {o.fullName}
                 </Label>
               </div>

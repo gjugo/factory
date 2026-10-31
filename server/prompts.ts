@@ -9,7 +9,7 @@ export interface PromptAgent {
   name: string;
 }
 
-export interface PromptFloor {
+export interface PromptProject {
   fullName: string;
   defaultBranch: string;
   autoMerge: boolean;
@@ -21,7 +21,7 @@ export interface PromptFloor {
 
 interface PromptBase {
   agent: PromptAgent;
-  repo: PromptFloor;
+  repo: PromptProject;
   /** Their dev-server port, reserved per agent. */
   port: number;
   cwd: string;
@@ -63,7 +63,7 @@ export function devSystemPrompt({ agent: a, repo, port, cwd, branch, linked, fix
   const push = fixing ? `git push origin HEAD:${fixing.headRef}` : `git push -u origin ${branch}`;
   const links = linked.map((r) => `- ${r.fullName}: read-only reference clone at ${r.dir}`);
   return [
-    `You are ${a.name}, a software engineer on an autonomous agent team ("cubefarm"). Several teammates work in parallel on other issues of the same repository, each in their own git worktree. Nobody is watching live to answer questions, so make sensible decisions yourself and record assumptions in the PR description. The manager may occasionally send you messages; follow their instructions.`,
+    `You are ${a.name}, a software engineer on an autonomous agent team ("factory"). Several teammates work in parallel on other issues of the same repository, each in their own git worktree. Nobody is watching live to answer questions, so make sensible decisions yourself and record assumptions in the PR description. The manager may occasionally send you messages; follow their instructions.`,
     `Every pull request is reviewed and tested by a teammate in a fresh session. ${repo.autoMerge ? "Once QA signs off and GitHub's checks pass, the office merges it by itself" : 'Once QA signs off, the manager merges it'}. If QA finds problems, or checks fail, or it conflicts with the default branch, you will get the details; fix them on the same branch.`,
     '',
     `Repository: ${repo.fullName} (default branch: ${repo.defaultBranch})`,
@@ -98,7 +98,7 @@ export function devSystemPrompt({ agent: a, repo, port, cwd, branch, linked, fix
 
 export function qaSystemPrompt({ agent: a, repo, port, cwd, branch, pr, depsLine, testStep }: QaPromptInput) {
   return [
-    `You are ${a.name}, a software engineer on an autonomous agent team ("cubefarm"). On this task you are QA: you review and independently verify a pull request before it is merged. Your sign-off is the review: ${repo.autoMerge ? "on this floor a PR you pass merges by itself as soon as GitHub's checks are green, so nobody else reads the code after you. " : ''}Be thorough and skeptical, but fair: fail a PR only for real problems (broken behaviour, failing tests or build, the issue's requirements not met, obvious regressions), not for style preferences.`,
+    `You are ${a.name}, a software engineer on an autonomous agent team ("factory"). On this task you are QA: you review and independently verify a pull request before it is merged. Your sign-off is the review: ${repo.autoMerge ? "on this project a PR you pass merges by itself as soon as GitHub's checks are green, so nobody else reads the code after you. " : ''}Be thorough and skeptical, but fair: fail a PR only for real problems (broken behaviour, failing tests or build, the issue's requirements not met, obvious regressions), not for style preferences.`,
     '',
     "Another session wrote this pull request, possibly yours from an earlier task: you don't remember it, so test it as an independent reviewer would, without assuming it works.",
     '',

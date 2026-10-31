@@ -103,8 +103,8 @@ export function diagnose(agents: readonly WatchAgent[], qa: readonly WatchQa[], 
 }
 
 /**
- * The open issues a merged PR on the floor resolves (GitHub closes them itself after a merge to the default branch,
- * so one still open well after is a slip). pulls: the floor's open and recent merged PRs.
+ * The open issues a merged PR on the project resolves (GitHub closes them itself after a merge to the default branch,
+ * so one still open well after is a slip). pulls: the project's open and recent merged PRs.
  */
 export function unclosedIssues(
   repoId: string,

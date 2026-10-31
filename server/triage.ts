@@ -28,20 +28,20 @@ export function triageStep(e: TriageEvent): TriageStep {
 }
 
 /**
- * Whether a triage tool may act on PR #pr of `floor`: only in a triage job, only on that job's floor, and only on an
- * open PR that is waiting on a decision. Throws HttpError 404 (another floor's or an unknown PR) or 409 (no triage
+ * Whether a triage tool may act on PR #pr of `project`: only in a triage job, only on that job's project, and only on an
+ * open PR that is waiting on a decision. Throws HttpError 404 (another project's or an unknown PR) or 409 (no triage
  * job, a closed PR, or one that isn't stuck).
  */
 export function checkTriageTarget(r: {
-  jobFloor: number | null; // the floor of the CEO's current triage job; null when it isn't on one
-  floor: number;
+  jobProject: number | null; // the project of the CEO's current triage job; null when it isn't on one
+  project: number;
   pr: number;
-  pull: { state: string } | undefined; // the PR as the floor last synced it
+  pull: { state: string } | undefined; // the PR as the project last synced it
   status: QaStatus | undefined; // its QA record
 }) {
-  if (r.jobFloor == null) throw new HttpError(409, 'Triage tools only work in a triage job.');
-  if (r.floor !== r.jobFloor) throw new HttpError(404, `This triage is for floor ${r.jobFloor}: PR #${r.pr} on floor ${r.floor} isn't yours to change.`);
-  if (!r.pull) throw new HttpError(404, `There is no PR #${r.pr} on floor ${r.floor}.`);
+  if (r.jobProject == null) throw new HttpError(409, 'Triage tools only work in a triage job.');
+  if (r.project !== r.jobProject) throw new HttpError(404, `This triage is for project ${r.jobProject}: PR #${r.pr} on project ${r.project} isn't yours to change.`);
+  if (!r.pull) throw new HttpError(404, `There is no PR #${r.pr} on project ${r.project}.`);
   if (r.pull.state !== 'OPEN') throw new HttpError(409, `PR #${r.pr} is ${r.pull.state.toLowerCase()}, so there is nothing to decide.`);
   if (r.status !== 'needs-human') throw new HttpError(409, `PR #${r.pr} isn't stuck: it is ${r.status ?? 'not in QA'}.`);
 }

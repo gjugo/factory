@@ -74,7 +74,7 @@ function repo(pulls: PullInfo[]): RepoView {
     description: '',
     url: '',
     defaultBranch: 'main',
-    floor: 1,
+    number: 1,
     color: '#ff0000',
     autoAssign: true,
     autoMerge: true,
@@ -164,7 +164,7 @@ describe('Journal', () => {
   const allText = async () => (await Promise.all((await files()).map((f) => fs.readFile(path.join(dir, f), 'utf8')))).join('\n');
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cubefarm-journal-'));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'factory-journal-'));
     now = new Date(2026, 9, 4, 9, 0).getTime();
     agents = [agent()];
     pulls = [pull(2, 'OPEN')];

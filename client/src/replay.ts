@@ -99,7 +99,7 @@ function applyLine(l: JournalLine, mode: 'play' | 'seek') {
     if (mode === 'seek' || l.boot) store.apply({ type: 'snapshot', data: frameSnapshot(l.k) }, 'seek');
     return;
   }
-  // Agents and floors are recorded as their changes since the last line: on top of how they are on screen.
+  // Agents and projects are recorded as their changes since the last line: on top of how they are on screen.
   if (l.e.type === 'agentPatch') {
     const prev = store.agents[l.e.id];
     if (prev) store.apply({ type: 'agent', agent: legacyAgent({ ...prev, ...l.e.set }) }, mode);

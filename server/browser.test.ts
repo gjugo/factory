@@ -27,21 +27,21 @@ describe('the Playwright MCP server', () => {
 
   it('passes Windows paths with spaces as whole arguments, unquoted', () => {
     const cmd = playwrightMcpCommand(
-      'C:\\Users\\A B\\AppData\\npm\\node_modules\\cubefarm\\node_modules\\@playwright\\mcp\\cli.js',
-      'C:\\Users\\A B\\cubefarm\\dist-server\\browser-init.js',
+      'C:\\Users\\A B\\AppData\\npm\\node_modules\\factory\\node_modules\\@playwright\\mcp\\cli.js',
+      'C:\\Users\\A B\\factory\\dist-server\\browser-init.js',
       'C:\\Users\\A B\\.factory\\sessions\\x\\browser',
       'C:\\Program Files\\nodejs\\node.exe',
     );
     expect(cmd).toEqual({
       command: 'C:\\Program Files\\nodejs\\node.exe',
       args: [
-        'C:\\Users\\A B\\AppData\\npm\\node_modules\\cubefarm\\node_modules\\@playwright\\mcp\\cli.js',
+        'C:\\Users\\A B\\AppData\\npm\\node_modules\\factory\\node_modules\\@playwright\\mcp\\cli.js',
         '--headless',
         '--isolated',
         '--output-dir',
         'C:\\Users\\A B\\.factory\\sessions\\x\\browser',
         '--init-script',
-        'C:\\Users\\A B\\cubefarm\\dist-server\\browser-init.js',
+        'C:\\Users\\A B\\factory\\dist-server\\browser-init.js',
       ],
     });
   });
@@ -86,7 +86,7 @@ describe('browserProblem', () => {
     expect(browserProblem(mcp, true)).toBeNull();
   });
   it('gives one clear line when Chrome is missing, or the tool is', () => {
-    expect(browserProblem(mcp, false)).toMatch(/Google Chrome not found.*install it, or run npx cubefarm doctor/);
-    expect(browserProblem(null, true)).toMatch(/@playwright\/mcp.*npx cubefarm doctor/);
+    expect(browserProblem(mcp, false)).toMatch(/Google Chrome not found.*install it, or run npx factory doctor/);
+    expect(browserProblem(null, true)).toMatch(/@playwright\/mcp.*npx factory doctor/);
   });
 });

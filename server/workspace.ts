@@ -4,11 +4,11 @@ import { HOME_DIR, WORKSPACE_ROOT } from './config.ts';
 import { type CommandError, gh, git, run } from './exec.ts';
 
 // Layout on disk:
-//   <your projects folder>/<repo>                    the floor's main checkout: your own folder, only fetched and fast-forwarded (syncMain)
-//   <WORKSPACE_ROOT>/<owner>__<repo>/desks/<name>    the floor's preview worktrees (and agents' desks from before machines)
+//   <your projects folder>/<repo>                    the project's main checkout: your own folder, only fetched and fast-forwarded (syncMain)
+//   <WORKSPACE_ROOT>/<owner>__<repo>/desks/<name>    the project's preview worktrees (and agents' desks from before machines)
 //   <HOME_DIR>/machines/<machine>/                   an agent's machine (see "agents' machines" below)
 // Desks stay outside your project so its dev server, tsc and linters never see them.
-// Floors connected before project folders existed keep their clone at <WORKSPACE_ROOT>/<owner>__<repo>/main.
+// Projects connected before project folders existed keep their clone at <WORKSPACE_ROOT>/<owner>__<repo>/main.
 
 const locks = new Map<string, Promise<unknown>>();
 const localRoots = new Map<string, string>(); // lowercased owner/name -> the user's project folder
@@ -25,7 +25,7 @@ export const repoDir = (fullName: string) => path.join(WORKSPACE_ROOT, fullName.
 export const mainDir = (fullName: string) => localRoots.get(fullName.toLowerCase()) ?? path.join(repoDir(fullName), 'main');
 export const deskDir = (fullName: string, agentSlug: string) => path.join(repoDir(fullName), 'desks', agentSlug);
 
-/** Use the user's own folder as a floor's main checkout (null: back to a clone the office manages). */
+/** Use the user's own folder as a project's main checkout (null: back to a clone the office manages). */
 export function setLocalPath(fullName: string, dir: string | null) {
   if (dir) localRoots.set(fullName.toLowerCase(), path.resolve(dir));
   else localRoots.delete(fullName.toLowerCase());
@@ -48,10 +48,10 @@ async function addLocalExcludes(main: string) {
   const missing = LOCAL_EXCLUDES.filter((l) => !current.split(/\r?\n/).includes(l));
   if (missing.length === 0) return;
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.appendFile(file, `${current && !current.endsWith('\n') ? '\n' : ''}# added by cubefarm\n${missing.join('\n')}\n`);
+  await fs.appendFile(file, `${current && !current.endsWith('\n') ? '\n' : ''}# added by factory\n${missing.join('\n')}\n`);
 }
 
-/** Make sure the floor's worktrees keep LOCAL_EXCLUDES out of git status. */
+/** Make sure the project's worktrees keep LOCAL_EXCLUDES out of git status. */
 export const ensureLocalExcludes = (fullName: string) => addLocalExcludes(mainDir(fullName));
 
 export function ensureClone(fullName: string): Promise<void> {
@@ -121,7 +121,7 @@ export function fileList(files: string[], max = 3, maxChars = 120): string {
   return `${shown.join(', ')}${more ? ` +${more} more` : ''}`;
 }
 
-/** How a floor's main checkout stands after syncMain. */
+/** How a project's main checkout stands after syncMain. */
 export interface MainSync {
   status: string; // e.g. "in sync", "updated to abc1234", "update ready (3 commits)" or "2 behind: local changes in README.md"
   behind: number; // commits it is still behind GitHub's default branch
@@ -129,7 +129,7 @@ export interface MainSync {
 }
 
 /**
- * Bring a floor's main checkout up to date with GitHub. It only ever fast-forwards, and only when the checkout is on
+ * Bring a project's main checkout up to date with GitHub. It only ever fast-forwards, and only when the checkout is on
  * the default branch with no local changes: nothing is stashed, reset or discarded, and anything else leaves the
  * folder as it is. Installs dependencies when package.json or the lockfile changed. With `touch: false` it only
  * reports (the office's own folder). Returns how the checkout stands; null when there is no checkout yet.
@@ -264,7 +264,7 @@ export async function publishFolder(dir: string, opts: { name: string; visibilit
     await commitReadme(full, opts.name, opts.description ?? '');
   }
   const origin = await git(['remote', 'get-url', 'origin'], { cwd: full }).catch(() => '');
-  if (origin) throw new Error(`${info.name}'s origin (${origin}) isn't on GitHub. cubefarm needs GitHub for issues and pull requests.`);
+  if (origin) throw new Error(`${info.name}'s origin (${origin}) isn't on GitHub. factory needs GitHub for issues and pull requests.`);
   const target = opts.owner ? `${opts.owner}/${opts.name}` : opts.name;
   const args = ['repo', 'create', target, `--${opts.visibility}`, '--source', full, '--remote', 'origin', '--push'];
   if (opts.description) args.push('--description', opts.description);
@@ -411,7 +411,7 @@ export function branchHolder(worktrees: WorktreeEntry[], branch: string, desk: s
   return worktrees.find((w) => w.branch === branch && !samePath(w.path, path.resolve(desk)))?.path ?? null;
 }
 
-/** `main`: the floor's checkout when it was let go (a disconnect points mainDir elsewhere before this runs). */
+/** `main`: the project's checkout when it was let go (a disconnect points mainDir elsewhere before this runs). */
 export function removeDesk(fullName: string, agentSlug: string, main = mainDir(fullName)): Promise<void> {
   return withRepoLock(fullName, async () => {
     const wt = deskDir(fullName, agentSlug);
@@ -449,7 +449,7 @@ export function parseWorktrees(porcelain: string): WorktreeEntry[] {
 
 /** What a sweep must leave alone. */
 export interface SweepKeep {
-  /** Desks in use: the floor's agents' slugs and its preview's. */
+  /** Desks in use: the project's agents' slugs and its preview's. */
   desks: string[];
   /** Branches in use: agents' current branches and open PRs' heads. */
   branches: string[];
@@ -463,7 +463,7 @@ export interface SweepInput {
   worktrees: WorktreeEntry[];
   /** The main checkout's local branches. */
   branches: string[];
-  /** The folder names in this floor's desks folder under `root`. */
+  /** The folder names in this project's desks folder under `root`. */
   folders: string[];
 }
 
@@ -606,7 +606,7 @@ export function sweepDesks(fullName: string, keep: SweepKeep): Promise<SweepResu
       }
     }
     const doomed = plan.branches.filter((b) => !held.has(b));
-    // A few dozen per command (a floor can have hundreds); git deletes what it can and complains about the rest.
+    // A few dozen per command (a project can have hundreds); git deletes what it can and complains about the rest.
     for (let i = 0; i < doomed.length; i += 40) await g(['branch', '-D', ...doomed.slice(i, i + 40)]).catch(() => undefined);
     if (doomed.length) {
       const left = new Set((await g(['for-each-ref', '--format=%(refname)', 'refs/heads/swarm', 'refs/heads/qa'])).split(/\r?\n/));
@@ -830,7 +830,7 @@ export const machineTmp = (machine: string) => path.join(machineDir(machine), 't
 const machineLock = (machine: string, fullName: string) => `machine:${machine}:${fullName}`;
 
 /**
- * The machine's own clone, made the first time from the same origin as the floor's checkout, borrowing that
+ * The machine's own clone, made the first time from the same origin as the project's checkout, borrowing that
  * checkout's objects so it's quick but sharing nothing afterwards.
  */
 async function ensureMachineClone(machine: string, fullName: string): Promise<string> {

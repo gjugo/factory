@@ -7,7 +7,7 @@ import { encode, hostSocket, readMessages, type ToHost } from './ptyProtocol.ts'
 describe('hostSocket', () => {
   it('names one named pipe per office home on Windows, whatever the path looks like', () => {
     const a = hostSocket('C:\\Users\\Ada\\.factory', 'win32');
-    expect(a).toMatch(/^\\\\\.\\pipe\\cubefarm-pty-[0-9a-f]{12}$/);
+    expect(a).toMatch(/^\\\\\.\\pipe\\factory-pty-[0-9a-f]{12}$/);
     expect(hostSocket('c:\\users\\ada\\.factory', 'win32')).toBe(a);
     expect(hostSocket('C:\\Users\\Ada\\other-home', 'win32')).not.toBe(a);
   });
