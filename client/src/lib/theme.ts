@@ -24,8 +24,16 @@ export function cachedTheme(): UiTheme {
   }
 }
 
+/** The browser's and the installed app's title bar: --background in each theme (index.html, the manifest). */
+const BAR = { light: '#ffffff', dark: '#0a0a0a' };
+
 function paint(theme: UiTheme) {
   document.documentElement.classList.toggle('dark', isDark(theme, darkQuery()?.matches ?? false));
+  // index.html has one per system scheme; a chosen theme paints both.
+  for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+    const scheme = m.media.includes('dark') ? 'dark' : 'light';
+    m.content = BAR[theme === 'system' ? scheme : theme];
+  }
   try {
     localStorage.setItem(THEME_CACHE_KEY, theme);
   } catch {
