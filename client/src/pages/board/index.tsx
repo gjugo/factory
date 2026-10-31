@@ -1,4 +1,4 @@
-import { Loader2, Plus, RefreshCw, Search } from 'lucide-react';
+import { ExternalLink, Loader2, Plus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { api } from '@/api';
@@ -109,6 +109,11 @@ function Board({ repo }: { repo: RepoView }) {
               <Plus aria-hidden /> New issue
             </Button>
             <ProjectNav repoId={repo.id} />
+            <Button variant="outline" size="icon" asChild>
+              <a href={repo.url} target="_blank" rel="noreferrer" aria-label={`${repo.fullName} on GitHub`} title={`${repo.fullName} on GitHub`}>
+                <ExternalLink aria-hidden />
+              </a>
+            </Button>
           </>
         }
       />
