@@ -8,6 +8,9 @@ export const links = {
   addProject: () => '/projects?add=1',
   board: (repoId: string, card?: BoardCard) => `/projects/${repoPath(repoId)}${card ? `?card=${cardParam(card)}` : ''}`,
   projectSettings: (repoId: string) => `/projects/${repoPath(repoId)}/settings`,
+  /** The project's app viewer: main, a PR's app (`pr`), or a PR beside main (`compare`). */
+  app: (repoId: string, view: { pr?: number | null; compare?: boolean } = {}) =>
+    `/projects/${repoPath(repoId)}/app${view.pr != null ? `?${view.compare ? 'compare' : 'pr'}=${view.pr}` : ''}`,
   agents: () => '/agents',
   /** The terminal grid, watching these agents (none: let the page pick). */
   agentsGrid: (ids: readonly string[] = []) => `/agents?view=grid${ids.length ? `&ids=${ids.map(encodeURIComponent).join(',')}` : ''}`,

@@ -1,10 +1,11 @@
-import { Loader2, Plus, RefreshCw, Search, Settings } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { api } from '@/api';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Notice } from '@/components/shared/notice';
 import { PageHeader } from '@/components/shared/page-header';
+import { ProjectNav } from '@/components/shared/project-nav';
 import { RelativeTime } from '@/components/shared/relative-time';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,11 +108,7 @@ function Board({ repo }: { repo: RepoView }) {
             <Button onClick={() => setNewIssue(true)}>
               <Plus aria-hidden /> New issue
             </Button>
-            <Button variant="outline" asChild>
-              <Link to={links.projectSettings(repo.id)}>
-                <Settings aria-hidden /> <span className="sr-only sm:not-sr-only">Project settings</span>
-              </Link>
-            </Button>
+            <ProjectNav repoId={repo.id} />
           </>
         }
       />
