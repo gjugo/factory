@@ -1,6 +1,9 @@
-// Desktop notifications (docs/pocket.md): the server's 'notify' events, shown by an office tab the manager can't see
+// Desktop notifications (docs/notifications.md): the server's 'notify' events, shown by an office tab the manager can't see
 // right now. Web Push (pwa.ts) covers devices without the office open; both tag a note by its id, so it shows once.
 import type { NoteView } from '../../shared/types';
+
+/** The event a notification's click raises in an open tab, with the page to show (app-shell.tsx navigates). */
+export const OPEN_EVENT = 'factory:open';
 
 export interface DesktopCheck {
   enabled: boolean; // Settings → Notifications → Desktop
@@ -24,18 +27,18 @@ export function showDesktopNote(note: NoteView, enabled: boolean) {
 
 /** Settings' Test: a notification right now, tab visible or not. */
 export function showTestNote() {
-  show({ id: `test-${Date.now()}`, event: 'test', title: '🔔 Test from factory', body: 'Desktop notifications work in this browser.', at: Date.now(), url: '/' });
+  show({ id: `test-${Date.now()}`, event: 'test', title: '🔔 Test from factory', body: 'Desktop notifications work in this browser.', at: Date.now(), url: '/settings' });
 }
 
 function show(note: NoteView) {
   shown.push(note);
-  const options: NotificationOptions = { body: note.body, tag: `cubefarm-${note.id}`, icon: '/icons/icon-192.png', data: { url: note.url } };
+  const options: NotificationOptions = { body: note.body, tag: `factory-${note.id}`, icon: '/icons/icon-192.png', data: { url: note.url } };
   const direct = () => {
     try {
       const n = new Notification(note.title, options);
       n.onclick = () => {
         window.focus();
-        window.dispatchEvent(new CustomEvent('cubefarm:open', { detail: note.url }));
+        window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: note.url }));
         n.close();
       };
     } catch {

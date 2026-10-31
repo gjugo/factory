@@ -256,7 +256,7 @@ app.get(
     sendAudio(res, await swarm.voice.standupAudio(q.n, q.part));
   }),
 );
-// Notifications (docs/pocket.md). Webhook URLs, tokens and push subscriptions go in; only hints come back out.
+// Notifications (docs/notifications.md). Webhook URLs, tokens and push subscriptions go in; only hints come back out.
 app.put('/api/notify/webhooks/:channel', route((req) => swarm.notifier.setWebhook(String(req.params.channel), req.body ?? {})));
 app.post('/api/notify/test', route((req) => swarm.notifier.test(str(req.body?.channel))));
 app.get('/api/notify/push/key', route(() => swarm.notifier.pushKey()));

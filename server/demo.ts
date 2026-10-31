@@ -1433,7 +1433,7 @@ const demoVoice: VoiceApi = {
  */
 const demoNotify: NotifyTransport = {
   demoWebhooks: {
-    ntfy: { url: 'https://ntfy.sh/cubefarm-demo-office' },
+    ntfy: { url: 'https://ntfy.sh/factory-demo-office' },
   },
   post: async ({ channel, url, text }) => {
     const ok = !/bad/i.test(url);

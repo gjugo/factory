@@ -1,16 +1,17 @@
-// Notifications, the sending part (docs/pocket.md): the rate-limited fan-out of a note to this office's open tabs
+// Notifications, the sending part (docs/notifications.md): the rate-limited fan-out of a note to this office's open tabs
 // (desktop notifications), Web Push to the manager's devices and the chat apps' webhooks. Webhook URLs and tokens live
 // in the secrets file next to the ElevenLabs key; the VAPID keys and push subscriptions in <SWARM_HOME>/push.json.
 // None of it is ever logged or sent to a browser, except the VAPID public key a browser subscribes with.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { NOTIFY_WEBHOOKS, noteTab } from '../shared/notify.ts';
+import { NOTIFY_WEBHOOKS, type NoteTarget } from '../shared/notify.ts';
 import type { NoteView, NotifyChannel, NotifyChannelsView, NotifyEvent, NotifySettings, NotifyWebhook } from '../shared/types.ts';
 import { HttpError } from './httpError.ts';
 import {
   due,
   nextDue,
   note,
+  notePath,
   noteText,
   ntfyPayload,
   ntfyTarget,
@@ -69,7 +70,7 @@ export interface NotifierDeps {
 const LABEL: Record<NotifyChannel, string> = { desktop: 'Desktop', push: 'Push', ntfy: 'ntfy' };
 const MAX_DEVICES = 20;
 /** VAPID's contact for push services: the project, as no email address is configured. */
-const SUBJECT = 'https://github.com/leonvanzyl/cubefarm';
+const SUBJECT = 'https://github.com/gjugo/factory';
 
 interface Device extends PushSub {
   addedAt: number;
@@ -133,10 +134,13 @@ export class Notifier {
     return { webhooks, pushDevices: this.push.devices.length };
   }
 
-  /** Something happened: tell the manager on every channel that's on, unless the event is off or had its minute. */
-  notify(event: NotifyEvent, title: string, body: string, line?: string) {
+  /**
+   * Something happened: tell the manager on every channel that's on, unless the event is off or had its minute.
+   * `target` is what it's about, so the note links to its page.
+   */
+  notify(event: NotifyEvent, title: string, body: string, line?: string, target?: NoteTarget) {
     if (!this.deps.settings().events[event]) return;
-    const r = offer(this.gates, note(event, title, body, line), this.now());
+    const r = offer(this.gates, note(event, title, body, line, target), this.now());
     this.gates = r.gates;
     if (r.send) void this.deliver(r.send);
     this.arm();
@@ -156,7 +160,7 @@ export class Notifier {
     if (!isChannel(channel)) throw new HttpError(400, `There's no notification channel called "${channel}".`);
     if (isWebhook(channel) && !this.webhooks[channel]) throw new HttpError(409, `Save the ${LABEL[channel]} settings first.`);
     if (channel === 'push' && !this.push.devices.length) throw new HttpError(409, 'No device gets push yet: turn push on on a device first.');
-    const n = note('test', 'Test from cubefarm', channel === 'desktop' ? 'Desktop notifications work in this browser.' : `${LABEL[channel]} notifications from the office work.`);
+    const n = note('test', 'Test from factory', channel === 'desktop' ? 'Desktop notifications work in this browser.' : `${LABEL[channel]} notifications from the office work.`);
     const results = await this.deliver(n, channel);
     const failed = results.filter((r) => r !== null);
     if (results.length && failed.length === results.length) throw new HttpError(502, `The test didn't arrive: ${failed[0]}.`);
@@ -223,12 +227,12 @@ export class Notifier {
     const s = this.deps.settings();
     const on = (c: NotifyChannel) => (only ? c === only : s.channels[c]);
     const at = this.now();
-    const view: NoteView = { id: `${at.toString(36)}-${++this.seq}`, event: n.event, title: n.title, body: n.body, at, url: `/?tab=${noteTab(n.event)}` };
+    const view: NoteView = { id: `${at.toString(36)}-${++this.seq}`, event: n.event, title: n.title, body: n.body, at, url: notePath(n) };
     if (on('desktop')) this.deps.broadcast(view);
     const sends: Promise<string | null>[] = [];
     for (const c of NOTIFY_WEBHOOKS) if (on(c) && this.webhooks[c]) sends.push(this.send(this.webhookRequest(c, n, s.officeUrl)));
     if (on('push') && this.push.vapid) {
-      const payload = JSON.stringify({ title: view.title, body: view.body, tag: `cubefarm-${view.id}`, url: view.url });
+      const payload = JSON.stringify({ title: view.title, body: view.body, tag: `factory-${view.id}`, url: view.url });
       for (const d of [...this.push.devices]) sends.push(this.sendPush(d, payload, noteText(n)));
     }
     return Promise.all(sends);

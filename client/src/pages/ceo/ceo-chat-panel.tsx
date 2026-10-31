@@ -7,6 +7,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { HandsFreeToggle } from '@/components/voice/hands-free-toggle';
+import { MicButton, MicStatus } from '@/components/voice/mic-button';
+import { ReplayButton } from '@/components/voice/replay-button';
 import { api } from '@/api';
 import { useWatchAgents } from '@/hooks/use-watch';
 import { cn } from '@/lib/utils';
@@ -16,6 +19,7 @@ import { firstUnreadId, followNewMessage, groupByDay, isAtBottom, readMarkFor, u
 
 // The thread with the CEO and the composer: the top bar's sheet and the CEO page both show it. It follows new
 // messages only from the bottom, marks what's on screen read, and offers a jump back down while you read older ones.
+// Messages read aloud have a ▶ to hear them again; the composer has the mic and the hands-free switch (voice/).
 
 const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -66,7 +70,10 @@ function Bubble({ m, ceoName }: { m: PhoneMessage; ceoName: string }) {
           <Markdown text={m.text} className="[&_blockquote]:text-foreground/80" />
         </div>
         {req && <RequestCard req={req} className="w-full" />}
-        {time}
+        <div className="flex items-center gap-1">
+          {time}
+          <ReplayButton m={m} />
+        </div>
       </div>
     </li>
   );
@@ -146,8 +153,8 @@ export function CeoChatPanel({ className }: { className?: string }) {
     void api.phoneRead(mark).catch(() => undefined);
   }, [atBottom, visible, messages, readAt]);
 
-  const send = async () => {
-    const body = text.trim();
+  const send = async (said?: string) => {
+    const body = (said ?? text).trim();
     if (!body || sending) return;
     setSending(true);
     sentHere.current = true;
@@ -236,35 +243,40 @@ export function CeoChatPanel({ className }: { className?: string }) {
         )}
       </div>
       <form
-        className="flex items-end gap-2 border-t p-3"
+        className="grid gap-1 border-t p-3"
         onSubmit={(e) => {
           e.preventDefault();
           void send();
         }}
       >
-        <Label htmlFor={`${id}-composer`} className="sr-only">
-          Message {ceoName}
-        </Label>
-        <Textarea
-          ref={composer}
-          id={`${id}-composer`}
-          rows={1}
-          value={text}
-          readOnly={sending}
-          aria-busy={sending}
-          aria-describedby={`${id}-hint`}
-          maxLength={4000}
-          placeholder={`Message ${ceoName}…`}
-          className="max-h-40 min-h-10 resize-none"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        <span id={`${id}-hint`} className="sr-only">
-          Enter sends, Shift+Enter adds a new line.
-        </span>
-        <Button type="submit" size="icon" disabled={!text.trim() || sending} aria-label={sending ? 'Sending' : 'Send'}>
-          {sending ? <Loader2 className="animate-spin" aria-hidden /> : <SendHorizontal aria-hidden />}
-        </Button>
+        <MicStatus kind="ceo" />
+        <div className="flex items-end gap-2">
+          <Label htmlFor={`${id}-composer`} className="sr-only">
+            Message {ceoName}
+          </Label>
+          <Textarea
+            ref={composer}
+            id={`${id}-composer`}
+            rows={1}
+            value={text}
+            readOnly={sending}
+            aria-busy={sending}
+            aria-describedby={`${id}-hint`}
+            maxLength={4000}
+            placeholder={`Message ${ceoName}…`}
+            className="max-h-40 min-h-10 resize-none"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          <span id={`${id}-hint`} className="sr-only">
+            Enter sends, Shift+Enter adds a new line.
+          </span>
+          <HandsFreeToggle ceoName={ceoName} />
+          <MicButton kind="ceo" value={text} onChange={setText} onSend={(t) => void send(t)} disabled={sending} />
+          <Button type="submit" size="icon" disabled={!text.trim() || sending} aria-label={sending ? 'Sending' : 'Send'}>
+            {sending ? <Loader2 className="animate-spin" aria-hidden /> : <SendHorizontal aria-hidden />}
+          </Button>
+        </div>
       </form>
     </div>
   );

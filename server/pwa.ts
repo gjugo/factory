@@ -1,4 +1,4 @@
-// The installable app's service worker (docs/pocket.md), served by the office at /sw.js. Its version is the build's
+// The installable app's service worker (docs/notifications.md), served by the office at /sw.js. Its version is the build's
 // index.html, the package version and the office's commit, so every office update makes a new worker, which drops the
 // old cache. It caches only the app shell (the page and its hashed /assets/, icons and manifest): never /api, the
 // websockets or anything else. It also shows Web Push notifications and opens the office when one is tapped.
@@ -11,10 +11,10 @@ export function swVersion(indexHtml: string, packageVersion: string, commit: str
 
 /** The worker itself. Only `version` changes between offices. */
 export function serviceWorkerSource(version: string): string {
-  return `// cubefarm's service worker (server/pwa.ts). Version ${version}.
+  return `// factory's service worker (server/pwa.ts). Version ${version}.
 const VERSION = ${JSON.stringify(version)};
-const CACHE = 'cubefarm-shell-' + VERSION;
-const PRECACHE = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'factory-shell-' + VERSION;
+const PRECACHE = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/badge-96.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -23,7 +23,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('cubefarm-shell-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('factory-shell-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let n = { title: 'cubefarm', body: '', tag: 'cubefarm', url: '/' };
+  let n = { title: 'factory', body: '', tag: 'factory', url: '/' };
   try {
     n = Object.assign(n, event.data ? event.data.json() : {});
   } catch {}
@@ -75,9 +75,11 @@ self.addEventListener('notificationclick', (event) => {
   const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      const open = list.find((c) => new URL(c.url).origin === self.location.origin);
+      // A tab already on that page first, then any office tab (told to go there), else a new one.
+      const mine = list.filter((c) => new URL(c.url).origin === self.location.origin);
+      const open = mine.find((c) => c.url === url) || mine.find((c) => c.focused) || mine[0];
       if (!open) return self.clients.openWindow(url);
-      open.postMessage({ type: 'cubefarm:open', url });
+      open.postMessage({ type: 'factory:open', url });
       return open.focus();
     }),
   );

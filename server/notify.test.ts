@@ -4,6 +4,7 @@ import {
   nextDue,
   note,
   NOTE_WINDOW_MS,
+  notePath,
   noteText,
   ntfyPayload,
   ntfyTarget,
@@ -124,6 +125,13 @@ describe('what a note says', () => {
     expect(ntfyPayload(note('merge', 'm', 'b'), 't')).toEqual({ topic: 't', title: '🔀 m', message: 'b', priority: 3 });
   });
 
+  it('links to the page it is about on the office address', () => {
+    const pr = note('needsHuman', 'PR #12 needs you', 'b', 'l', { repoId: 'acme/pixel-todo', prNumber: 12 });
+    expect(notePath(pr)).toBe('/projects/acme/pixel-todo?card=pr-12');
+    expect(noteText(pr, 'https://office.example.ts.net')).toBe('⚠️ PR #12 needs you\nb\nhttps://office.example.ts.net/projects/acme/pixel-todo?card=pr-12');
+    expect(ntfyPayload(note('ceoMessage', 'Morgan', 'hi'), 't', 'https://o.example/')).toMatchObject({ click: 'https://o.example/ceo' });
+  });
+
   it("turns a CEO's markdown into one plain line", () => {
     expect(plainText('## Update\n- **Ada** shipped [#12](https://github.com/x/y/pull/12)\n- `npm test` passes')).toBe('Update Ada shipped #12 npm test passes');
     expect(plainText('Both are *easy to get wrong* for _keyboard_ users; snake_case stays.')).toBe('Both are easy to get wrong for keyboard users; snake_case stays.');
@@ -138,6 +146,14 @@ describe('what a note says', () => {
       body: '• Morgan: a\n• Morgan: b',
       line: '2 more messages from the CEO',
     });
+  });
+
+  it('links a summary to what all its notes share', () => {
+    const pr = (repoId: string, prNumber: number) => note('needsHuman', `PR #${prNumber}`, 'b', 'l', { repoId, prNumber });
+    expect(notePath(summarize([pr('acme/web', 1), pr('acme/web', 2)]))).toBe('/projects/acme/web');
+    expect(notePath(summarize([pr('acme/web', 1), pr('acme/api', 2)]))).toBe('/');
+    const stuck = (agentId: string) => note('agentError', 'x', 'y', 'z', { agentId });
+    expect(notePath(summarize([stuck('a'), stuck('b')]))).toBe('/agents');
   });
 });
 
