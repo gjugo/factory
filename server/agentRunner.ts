@@ -333,7 +333,7 @@ export function startSession(opts: SessionOptions, callbacks: SessionCallbacks):
     env[k] = v;
   }
   Object.assign(env, opts.env);
-  env.CLAUDE_AGENT_SDK_CLIENT_APP = `cubefarm/${VERSION}`;
+  env.CLAUDE_AGENT_SDK_CLIENT_APP = `factory/${VERSION}`;
 
   const mcpServers: Options['mcpServers'] = {};
   if (opts.browserTesting) {

@@ -186,7 +186,7 @@ const IDLE_MS = 30 * 60_000;
 const BOX_IDLE_MS = 5 * 60_000;
 
 /** PreToolUse's answer: nobody may be watching to answer a permission question, so every tool call is approved. */
-const ALLOW = { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', permissionDecisionReason: 'Approved by cubefarm' } };
+const ALLOW = { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', permissionDecisionReason: 'Approved by factory' } };
 
 const toolInput = (b: Record<string, unknown>) => (b.tool_input && typeof b.tool_input === 'object' ? b.tool_input : {}) as Record<string, unknown>;
 
@@ -871,7 +871,7 @@ export function startCliSession(opts: SessionOptions, callbacks: SessionCallback
     effort: opts.effort,
     resumeId: opts.resumeSessionId,
     sessionId,
-    name: opts.label ?? 'cubefarm',
+    name: opts.label ?? 'factory',
     role: opts.role,
     additionalDirectories: opts.additionalDirectories,
     files,

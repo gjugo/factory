@@ -12,7 +12,7 @@ const state = (s: Partial<DepsState>): DepsState => {
   return { pkg, lock, hash: depsHash(pkg ?? '', lock), marker: '', nodeModules: false, ...s };
 };
 
-const ROOT = await fs.mkdtemp(path.join(os.tmpdir(), 'cubefarm deps '));
+const ROOT = await fs.mkdtemp(path.join(os.tmpdir(), 'factory deps '));
 afterAll(() => fs.rm(ROOT, { recursive: true, force: true, maxRetries: 5 }));
 let seq = 0;
 /** A checkout with the given files; node_modules (with a marker for its current hash) when `installed`. */

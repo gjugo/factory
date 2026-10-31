@@ -2,7 +2,9 @@
 
 cubefarm's orchestrator (a Node server that runs one coding-agent session, Claude Code, Codex or OpenCode, per agent,
 plus the CEO, working through GitHub issues) with a professional web dashboard (React + shadcn/ui + Tailwind) in place
-of cubefarm's cartoon 3D office. Projects are cubefarm's floors. README.md is the quick start.
+of cubefarm's cartoon 3D office. Projects are cubefarm's floors, renamed everywhere (#26): `RepoView.number` is a
+project's number (its preview port is `SWARM_PREVIEW_PORT` + number), and the CEO's tools take `project`. README.md is
+the quick start.
 
 ## SAFETY (read first)
 
@@ -48,8 +50,10 @@ screenshots in the PR.
 
 Server (`server/`) and shared (`shared/`) started as cubefarm's. The 3D office's life (visitors and presence, ping-pong,
 coins, decorations and achievements, weather and world events, the dog, holiday themes) was removed (#24), so they now
-diverge from upstream: port cubefarm changes by hand. Agents' careers stay (`server/ledger.ts`, `shared/careers.ts`).
-An older state file's removed fields are dropped on load (`legacySettings` in `shared/journal.ts`, `loadLedger`).
+diverge from upstream: port cubefarm changes by hand, floor → project and cubefarm → factory included. Agents' careers
+stay (`server/ledger.ts`, `shared/careers.ts`). An older state file's removed fields are dropped on load (`legacySettings` in `shared/journal.ts`, `loadLedger`), and its
+`floor` keys are read as today's (`legacyRepo`, `legacyLine` for journals). `scripts/names.test.ts` fails on "cubefarm" or
+"floor" in runtime code (comments citing cubefarm are fine) outside its short allowlist.
 - `server/index.ts`: entry; the real or demo backend, REST under `/api`, the `/ws` and `/ws/term` websockets, serves `dist/`.
 - `server/config.ts`: `SWARM_PORT` (4517), `SWARM_HOST`, `SWARM_HOME` (`~/.factory`), `SWARM_PREVIEW_PORT` (6700), `--demo`.
 - `server/swarm.ts`: the orchestrator (projects, agents, scheduling, build → QA → fix → merge, the CEO's jobs,
@@ -65,10 +69,10 @@ An older state file's removed fields are dropped on load (`legacySettings` in `s
 `scripts/office.mjs`: the launcher (`npm run dev` / `demo` / `start`), its pure decisions in `scripts/officeSteps.mjs`.
 
 Client (`client/`, the Vite root; React 19, React Router, Tailwind v4, shadcn/ui, zustand):
-- `src/store.ts`: the snapshot plus `apply(ServerEvent)`; selectors (`kanbanFor`, `agentsOnRepo`, `floorPrCounts`,
+- `src/store.ts`: the snapshot plus `apply(ServerEvent)`; selectors (`kanbanFor`, `agentsOnRepo`, `projectPrCounts`,
   `needsYouCount`, `projectHealth`, `pendingRequests`, `unreadMessages`…). Server `toast` events go to sonner.
 - `src/net.ts`: the `/ws` connection with reconnect; it sends the tab's watch (`src/watch.ts`) as it changes.
-- `src/watch.ts`: the watch derived from the route's project floor plus what pages ask for: `useWatchAgents(ids)`
+- `src/watch.ts`: the watch derived from the route's project number plus what pages ask for: `useWatchAgents(ids)`
   and `useWorkersWatch()` in `src/hooks/use-watch.ts`.
 - `src/api.ts`: REST commands; errors become toasts. `ops.ts`, `qaCard.ts`, `officeUpdate.ts`, `notifications.ts`:
   cubefarm's pure helpers.

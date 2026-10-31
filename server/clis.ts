@@ -70,9 +70,9 @@ export function unwrapCmdShim(shimPath: string, text: string): { file: string; a
 }
 
 /**
- * The Claude Code the Agent SDK ships as a per-platform package (the one `cubefarm login` signs in with), so the
+ * The Claude Code the Agent SDK ships as a per-platform package (the one `factory login` signs in with), so the
  * terminal runtime works without Claude Code installed, on the version the office was tested with. Same lookup as
- * the SDK's own and bin/cubefarm.js.
+ * the SDK's own and bin/factory.js.
  */
 let bundled: string | null | undefined;
 
@@ -204,7 +204,7 @@ function codexLocal(model: string, toml: (s: string) => string): string[] {
   const { provider } = local;
   const url = localUrl(provider);
   if (provider.codexOss && url === provider.url) return ['--oss', '--local-provider', provider.id, '-m', local.model];
-  const id = `cubefarm-${provider.id}`;
+  const id = `factory-${provider.id}`;
   return ['-c', `model_providers.${id}={name=${toml(provider.label)},base_url=${toml(url)},wire_api="responses"}`, '-c', `model_provider=${toml(id)}`, '-m', local.model];
 }
 
@@ -390,7 +390,7 @@ export function signedOutScreen(screen: string): boolean {
 // ---------- helper scripts the CLIs run ----------
 
 /** Claude Code's status line: posts its data (cost, usage limits) to the office and shows the office's line. */
-export const STATUSLINE_SOURCE = String.raw`// cubefarm: Claude Code's status line. Forwards the session's status to the office and prints the office's line.
+export const STATUSLINE_SOURCE = String.raw`// factory: Claude Code's status line. Forwards the session's status to the office and prints the office's line.
 const url = process.argv[2];
 let body = '';
 process.stdin.on('data', (c) => (body += c));
@@ -406,13 +406,13 @@ process.stdin.on('end', async () => {
     const out = await res.json();
     process.stdout.write(String(out.statusLine ?? ''));
   } catch {
-    process.stdout.write('cubefarm');
+    process.stdout.write('factory');
   }
 });
 `;
 
 /** Codex's notify program: Codex runs it with a JSON argument when a turn completes. */
-export const NOTIFY_SOURCE = String.raw`// cubefarm: Codex's notify program. Tells the office a turn is complete.
+export const NOTIFY_SOURCE = String.raw`// factory: Codex's notify program. Tells the office a turn is complete.
 const [url, payload] = process.argv.slice(2);
 let event = {};
 try {
@@ -430,7 +430,7 @@ if (event.type === 'agent-turn-complete') {
 `;
 
 /** Codex's hook program: passes what Codex tells a hook on to the office and answers nothing, so Codex carries on as usual. */
-export const CODEX_HOOK_SOURCE = String.raw`// cubefarm: Codex's hooks. Tells the office what Codex is doing; never changes what it does.
+export const CODEX_HOOK_SOURCE = String.raw`// factory: Codex's hooks. Tells the office what Codex is doing; never changes what it does.
 const url = process.env.FACTORY_HOOK_URL;
 const chunks = [];
 process.stdin.on('data', (c) => chunks.push(c));
@@ -443,7 +443,7 @@ process.stdin.on('end', async () => {
 `;
 
 /** OpenCode plugin: reports its session and when it goes idle (a turn is complete). No imports: loaded from a file. */
-export const OPENCODE_PLUGIN_SOURCE = String.raw`// cubefarm: tells the office when OpenCode's session goes idle.
+export const OPENCODE_PLUGIN_SOURCE = String.raw`// factory: tells the office when OpenCode's session goes idle.
 export default async function FactoryPlugin({ client } = {}) {
   const url = process.env.FACTORY_NOTIFY_URL;
   if (!url) return {};

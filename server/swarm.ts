@@ -1915,8 +1915,8 @@ export class Swarm {
     checkCloseIssue({ project: repo.number, number, state, pulls: rt?.pulls ?? [] });
     const by = this.state.settings.managerName || 'the manager';
     // From the office doctor, for an issue a merged PR resolved: closed as completed, not as not planned.
-    if (resolvedBy) await this.backend.closeIssue(repo.fullName, number, `Resolved by #${resolvedBy}; closed by ${by} from the cubefarm office.`, 'completed');
-    else await this.backend.closeIssue(repo.fullName, number, `Closed as not planned by ${by} from the cubefarm office.`, 'not planned');
+    if (resolvedBy) await this.backend.closeIssue(repo.fullName, number, `Resolved by #${resolvedBy}; closed by ${by} from the factory office.`, 'completed');
+    else await this.backend.closeIssue(repo.fullName, number, `Closed as not planned by ${by} from the factory office.`, 'not planned');
     this.toast('info', `Closed #${number} on ${repo.fullName}`);
     this.learnIssueClosed(repo, number);
     await this.syncRepo(repo.id);
@@ -3453,7 +3453,7 @@ export class Swarm {
     const dev = rec.devAgentId ? this.state.agents.find((x) => x.id === rec.devAgentId) : null;
     const lines = [
       `## 🔍 QA report: ${pass ? '✅ Passed' : '❌ Failed'}`,
-      `**Tester:** ${a.name} (cubefarm agent, in a fresh session) · **Round:** ${rec.round}${dev ? ` · **Author:** ${dev.name}` : ''}`,
+      `**Tester:** ${a.name} (factory agent, in a fresh session) · **Round:** ${rec.round}${dev ? ` · **Author:** ${dev.name}` : ''}`,
       '',
       report.summary,
       '',
@@ -3468,7 +3468,7 @@ export class Swarm {
     if (images.length) lines.push('', '### 📸 Evidence', '', ...images.flatMap((img) => [img, '']));
     else lines.push('', '_No browser screenshots were taken in this round._');
     const merge = repo.autoMerge ? "merges automatically once GitHub's checks pass" : 'ready for the manager to merge';
-    lines.push('', `<sub>Posted by cubefarm · ${pass ? merge : next === 'needs-human' ? 'needs a human decision' : next === 'conflict' ? `sent back to the developer to merge ${repo.defaultBranch} and fix` : 'sent back to the developer for fixes'}</sub>`);
+    lines.push('', `<sub>Posted by factory · ${pass ? merge : next === 'needs-human' ? 'needs a human decision' : next === 'conflict' ? `sent back to the developer to merge ${repo.defaultBranch} and fix` : 'sent back to the developer for fixes'}</sub>`);
     return lines.join('\n');
   }
 
@@ -4566,7 +4566,7 @@ export class Swarm {
     if (!comment) throw new HttpError(400, 'Say why the pull request is closing: the comment is posted on it.');
     const issues = listed ? issuesResolvedBy(listed) : [];
     const ceo = this.ceo().name;
-    await this.backend.commentPull(repo.fullName, rec.prNumber, `${comment}\n\n<sub>Closed by ${ceo}, the cubefarm CEO, after triage.${issues.length ? ' Its issue stays open, so it is built again.' : ''}</sub>`);
+    await this.backend.commentPull(repo.fullName, rec.prNumber, `${comment}\n\n<sub>Closed by ${ceo}, the factory CEO, after triage.${issues.length ? ' Its issue stays open, so it is built again.' : ''}</sub>`);
     // Closing deletes no branch and leaves the issue open, so the scheduler hands it out again.
     await this.backend.closePull(repo.fullName, rec.prNumber);
     this.postMessage('office', `🗂️ ${ceo} closed PR #${rec.prNumber} on project ${repo.number}: ${comment.split('\n')[0].slice(0, 200)}`);
@@ -5359,7 +5359,7 @@ export class Swarm {
     this.ceoIssues.check();
     const title = String(x.title ?? '').trim().slice(0, 120);
     if (!title) throw new Error('An issue needs a title.');
-    const body = `${String(x.body ?? '').trim()}\n\n---\n_Filed by ${this.ceo().name}, the cubefarm CEO._`;
+    const body = `${String(x.body ?? '').trim()}\n\n---\n_Filed by ${this.ceo().name}, the factory CEO._`;
     const n = await this.backend.createIssue(repo.fullName, title, body);
     this.ceoIssues.record(repo.id);
     return `Filed #${n} on project ${repo.number}: ${title}.`;

@@ -132,7 +132,7 @@ export const realCloud: CloudBackend = {
   gitIdentity: async (login) => {
     const get = (key: string) => run('git', ['config', '--global', key], { timeoutMs: 10_000 }).then((v) => v.trim(), () => '');
     const [name, email] = await Promise.all([get('user.name'), get('user.email')]);
-    return { name: name || login || 'cubefarm', email: email || (login ? `${login}@users.noreply.github.com` : '') };
+    return { name: name || login || 'factory', email: email || (login ? `${login}@users.noreply.github.com` : '') };
   },
   reconnect: reconnectBoxClis,
   detach: detachBoxClis,

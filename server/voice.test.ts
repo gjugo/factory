@@ -199,7 +199,7 @@ describe('Voice', () => {
     });
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cubefarm-voice-'));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'factory-voice-'));
     settings = { ...DEFAULT_VOICE, provider: 'elevenlabs' };
     listen = { ...DEFAULT_LISTEN, provider: 'elevenlabs' };
     notes = [];

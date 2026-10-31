@@ -1,4 +1,4 @@
-// Types shared between the swarm server and the 3D client.
+// Types shared between the swarm server and the dashboard.
 import type { CareerView } from './careers.ts';
 
 import type { UiSettings } from './ui.ts';
@@ -592,7 +592,7 @@ export interface WorldSnapshot {
   ceo: CeoInfo;
   messages: PhoneMessage[];
   phoneReadAt: number; // CEO messages newer than this are unread
-  version?: string; // the cubefarm version the server runs (package.json)
+  version?: string; // the factory version the server runs (package.json)
   officeCommit?: string | null; // short sha the server started on (absent on servers without self-update)
   officeUpdate?: OfficeUpdateView;
   usage: UsageView;

@@ -6,17 +6,17 @@ import { defaultProjectsDir, demoScale, demoScaleNote, envMinutes, envPort, isLo
 
 let tmp: string;
 beforeEach(() => {
-  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cubefarm-config-'));
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-config-'));
 });
 afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 describe('defaultProjectsDir', () => {
   it('is the folder a checkout sits in', () => {
-    expect(defaultProjectsDir(path.join(tmp, 'Projects', 'cubefarm'), tmp)).toBe(path.join(tmp, 'Projects'));
+    expect(defaultProjectsDir(path.join(tmp, 'Projects', 'factory'), tmp)).toBe(path.join(tmp, 'Projects'));
   });
 
   it('is a projects folder in your home when installed from npm', () => {
-    const installed = path.join(tmp, 'npm', 'node_modules', 'cubefarm');
+    const installed = path.join(tmp, 'npm', 'node_modules', 'factory');
     expect(defaultProjectsDir(installed, tmp)).toBe(path.join(tmp, 'Projects'));
     fs.mkdirSync(path.join(tmp, 'code'));
     expect(defaultProjectsDir(installed, tmp)).toBe(path.join(tmp, 'code'));

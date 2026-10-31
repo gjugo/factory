@@ -22,7 +22,7 @@ function subscription(endpoint = 'https://push.example.net/push/pushSECRETendpoi
   return { endpoint, keys: { p256dh: ua.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url') } };
 }
 
-const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'cubefarm-notify-'));
+const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'factory-notify-'));
 const settle = () => new Promise((r) => setTimeout(r, 30));
 
 afterEach(() => {

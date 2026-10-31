@@ -47,15 +47,15 @@ describe('the boot script', () => {
   const body = BOOT_SCRIPT.replace(/^<script[^>]*>/, '').replace(/<\/script>$/, '');
 
   it('goes at the very top of the head, once', () => {
-    const out = injectBoot('<!doctype html><html><head><script data-cubefarm-sync></script></head></html>');
-    expect(out).toBe(`<!doctype html><html><head>${BOOT_SCRIPT}<script data-cubefarm-sync></script></head></html>`);
+    const out = injectBoot('<!doctype html><html><head><script data-factory-sync></script></head></html>');
+    expect(out).toBe(`<!doctype html><html><head>${BOOT_SCRIPT}<script data-factory-sync></script></head></html>`);
     expect(injectBoot(out)).toBe(out);
     expect(injectBoot('<!DOCTYPE html><p>hi</p>')).toBe(`<!DOCTYPE html>${BOOT_SCRIPT}<p>hi</p>`);
   });
 
   /** Runs the script on a page; what it did. */
   function boot(controller: string | null, tries = 0, sw = true) {
-    const store = new Map<string, string>(tries ? [['cubefarm-preview-boot', String(tries)]] : []);
+    const store = new Map<string, string>(tries ? [['factory-preview-boot', String(tries)]] : []);
     const did = { stopped: false, registered: null as null | [string, unknown] };
     const navigator = sw
       ? {
@@ -70,7 +70,7 @@ describe('the boot script', () => {
       : {};
     const sessionStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v), removeItem: (k: string) => store.delete(k) };
     new Function('navigator', 'sessionStorage', 'window', 'location', body)(navigator, sessionStorage, { stop: () => (did.stopped = true) }, { reload() {} });
-    return { ...did, tries: store.get('cubefarm-preview-boot') ?? null };
+    return { ...did, tries: store.get('factory-preview-boot') ?? null };
   }
 
   it('lets a page the preview worker controls load', () => {

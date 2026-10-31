@@ -5,7 +5,7 @@ agent (**Claude Code, Codex or OpenCode**) in a terminal of its own on your mach
 has every pull request reviewed and tested in a real browser, and merges what passes.
 
 factory is [cubefarm](https://github.com/leonvanzyl/cubefarm) (MIT) with a professional React + shadcn/ui dashboard
-in place of cubefarm's cartoon 3D office. The orchestrator is cubefarm's, unchanged: projects (cubefarm's floors),
+in place of cubefarm's cartoon 3D office. The orchestrator is cubefarm's: projects (what cubefarm calls floors),
 agents, the CEO, the build → QA → fix → merge loop, previews, notifications and cloud agents. What's gone is the 3D
 world: walking the floors, toys, games, photo mode and office life.
 
@@ -22,7 +22,8 @@ npm run build
 SWARM_HOME="$PWD/.swarm-home" SWARM_PORT=4600 node --import tsx server/index.ts --demo
 ```
 
-Open http://localhost:4600. The banner says `DEMO MODE` and prints where the demo keeps its state.
+Open http://localhost:4600. The banner says `DEMO MODE` and prints where the demo keeps its state. Add
+`--projects 10 --agents 15` for a big company (`--floors`, the old name, still works).
 
 ## Running it for real
 
@@ -44,7 +45,7 @@ terminal keeper's socket, the voice cache, push keys and `last-update.json`); se
 | `SWARM_HOME` | `~/.factory` | where the office keeps everything |
 | `SWARM_PORT` | `4517` | the office (REST, websockets, the built dashboard) |
 | `SWARM_CLIENT_PORT` | `5517` | Vite's dev server (`npm run dev`) |
-| `SWARM_PREVIEW_PORT` | `6700` | project previews run on this + the project's floor, PR previews 100 above |
+| `SWARM_PREVIEW_PORT` | `6700` | project previews run on this + the project's number, PR previews 100 above |
 
 These are chosen to stay clear of a cubefarm office on the same machine (`~/.cubefarm`, 4317/5317, 6300+).
 

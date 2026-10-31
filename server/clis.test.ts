@@ -169,8 +169,8 @@ describe('launchArgs', () => {
     expect(args('ollama/gpt-oss:20b').join(' ')).toContain('--oss --local-provider ollama -m gpt-oss:20b');
     const llama = args('llamacpp/default');
     expect(llama).not.toContain('--oss');
-    expect(llama).toContain('model_providers.cubefarm-llamacpp={name="llama.cpp",base_url="http://127.0.0.1:8080/v1",wire_api="responses"}');
-    expect(llama).toContain('model_provider="cubefarm-llamacpp"');
+    expect(llama).toContain('model_providers.factory-llamacpp={name="llama.cpp",base_url="http://127.0.0.1:8080/v1",wire_api="responses"}');
+    expect(llama).toContain('model_provider="factory-llamacpp"');
     expect(llama.slice(llama.indexOf('-m'), llama.indexOf('-m') + 2)).toEqual(['-m', 'default']);
   });
 

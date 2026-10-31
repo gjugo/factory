@@ -157,7 +157,7 @@ async function ensureLabel(fullName: string, name: string) {
   const key = `${fullName}#${name}`;
   if (labelsMade.has(key)) return;
   try {
-    await gh(['label', 'create', name, '-R', fullName, '--color', 'c77dff', '--description', 'Added by cubefarm']);
+    await gh(['label', 'create', name, '-R', fullName, '--color', 'c77dff', '--description', 'Added by factory']);
   } catch (err) {
     if (!(err instanceof CommandError && /already exists/i.test(err.stderr))) throw err;
   }
@@ -318,11 +318,11 @@ async function ensureEvidenceBranch(fullName: string) {
     await gh(['api', `repos/${fullName}/git/ref/heads/${EVIDENCE_BRANCH}`]);
   } catch {
     const readme =
-      '# QA evidence\n\nScreenshots attached to pull request QA reports by cubefarm QA agents.\nThis branch has no shared history with the code and is never merged.\n';
+      '# QA evidence\n\nScreenshots attached to pull request QA reports by factory QA agents.\nThis branch has no shared history with the code and is never merged.\n';
     const newTree = await ghApiJson<{ sha: string }>('POST', `repos/${fullName}/git/trees`, {
       tree: [{ path: 'README.md', mode: '100644', type: 'blob', content: readme }],
     });
-    const commit = await ghApiJson<{ sha: string }>('POST', `repos/${fullName}/git/commits`, { message: 'QA evidence branch (cubefarm)', tree: newTree.sha, parents: [] });
+    const commit = await ghApiJson<{ sha: string }>('POST', `repos/${fullName}/git/commits`, { message: 'QA evidence branch (factory)', tree: newTree.sha, parents: [] });
     await ghApiJson('POST', `repos/${fullName}/git/refs`, { ref: `refs/heads/${EVIDENCE_BRANCH}`, sha: commit.sha });
   }
   evidenceReady.add(fullName);

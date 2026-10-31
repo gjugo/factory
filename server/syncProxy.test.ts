@@ -61,7 +61,7 @@ describe('a sync proxy in front of an app (loopback only)', () => {
     const page = await fetch(`http://127.0.0.1:${port}/about`);
     expect(page.headers.get('x-frame-options')).toBeNull();
     const html = await page.text();
-    expect(html).toContain('data-cubefarm-sync');
+    expect(html).toContain('data-factory-sync');
     expect(html).toContain('<body>/about</body>');
 
     expect(await (await fetch(`http://127.0.0.1:${port}/data.json`)).json()).toEqual({ ok: true });
@@ -92,20 +92,20 @@ describe('the sync script itself', () => {
     const history = { pushState() {}, replaceState() {} };
     const run = new Function('window', 'parent', 'location', 'history', 'document', 'addEventListener', 'scrollX', 'scrollY', 'scrollTo', body);
     run(win, parent, location, history, { readyState: 'complete' }, (k: string, f: (e: unknown) => void) => (handlers[k] = f), 0, 0, () => {});
-    const follow = (path: string) => handlers.message({ source: parent, data: { cubefarmSyncTo: 'path', path } });
+    const follow = (path: string) => handlers.message({ source: parent, data: { factorySyncTo: 'path', path } });
     return { sent, assigned, follow };
   }
 
   it("reports and follows the app's own paths", () => {
     const f = frameAt('/todos');
-    expect(f.sent).toEqual([{ cubefarmSync: 'path', x: 0, y: 0, path: '/todos' }]);
+    expect(f.sent).toEqual([{ factorySync: 'path', x: 0, y: 0, path: '/todos' }]);
     f.follow('/about');
     expect(f.assigned).toEqual(['/about']);
   });
 
   it("leaves out the office's /preview/<port> prefix when shown through the gateway", () => {
     const f = frameAt('/preview/51234/todos');
-    expect(f.sent).toEqual([{ cubefarmSync: 'path', x: 0, y: 0, path: '/todos' }]);
+    expect(f.sent).toEqual([{ factorySync: 'path', x: 0, y: 0, path: '/todos' }]);
     f.follow('/about');
     expect(f.assigned).toEqual(['/preview/51234/about']);
   });
