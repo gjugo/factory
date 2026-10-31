@@ -8,6 +8,7 @@ import { api } from '@/api';
 import { useRouteRepo } from '@/hooks/use-route-repo';
 import { useRouteWatch } from '@/hooks/use-watch';
 import { useApplyTheme } from '@/lib/theme';
+import { OPEN_EVENT } from '@/notifications';
 import { useStore } from '@/store';
 import { AppSidebar } from './app-sidebar';
 import { Banners } from './banners';
@@ -23,14 +24,14 @@ export function AppShell() {
   const navigate = useNavigate();
   const ui = useStore((s) => s.settings.ui);
 
-  // A desktop notification's click (notifications.ts) opens the page it's about.
+  // A desktop or push notification's click (notifications.ts, the service worker) opens the page it's about.
   useEffect(() => {
     const open = (e: Event) => {
       const url = (e as CustomEvent<string>).detail;
       if (typeof url === 'string' && url.startsWith('/')) navigate(url);
     };
-    window.addEventListener('cubefarm:open', open);
-    return () => window.removeEventListener('cubefarm:open', open);
+    window.addEventListener(OPEN_EVENT, open);
+    return () => window.removeEventListener(OPEN_EVENT, open);
   }, [navigate]);
 
   // The desktop sidebar's state is an office setting too.
