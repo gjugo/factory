@@ -2,8 +2,14 @@ import { useStore } from './store';
 import type { AgentStyle } from '../../shared/looks';
 import type { AgentCli, AgentPromptView, AgentView, CloudView, DoctorFinding, DoctorFix, EffortLevel, GhRepoSummary, NotifyChannel, NotifyChannelsView, NotifyWebhook, OfficeUpdateView, PreviewView, ProjectFolderView, PrPreviewView, RepoView, SwarmSettings, UsageView, VoiceCacheView, VoiceOption, MachineHost } from '../../shared/types';
 import type { JournalChunk, JournalDayView } from '../../shared/journal';
+import { allowedWhileReplaying, showReplayHint } from './lib/replay-guard';
 
 async function call<T = unknown>(method: string, url: string, body?: unknown, toast = true): Promise<T> {
+  // The time-lapse shows a recorded stretch: nothing in it can be acted on.
+  if (useStore.getState().replaying && !allowedWhileReplaying(method, url, body)) {
+    if (toast) showReplayHint();
+    throw new Error('The time-lapse is playing');
+  }
   const res = await fetch(url, {
     method,
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
