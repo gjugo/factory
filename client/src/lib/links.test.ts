@@ -9,6 +9,7 @@ describe('links', () => {
     expect(links.addProject()).toBe('/projects?add=1');
     expect(links.board('acme/web')).toBe('/projects/acme/web');
     expect(links.projectSettings('acme/web')).toBe('/projects/acme/web/settings');
+    expect(links.app('acme/web')).toBe('/projects/acme/web/app');
     expect(links.agents()).toBe('/agents');
     expect(links.agent(CEO_ID)).toBe(`/agents/${CEO_ID}`);
     expect(links.ceo()).toBe('/ceo');
@@ -18,6 +19,13 @@ describe('links', () => {
   it('opens a card on the board', () => {
     expect(links.board('acme/web', { kind: 'issue', number: 12 })).toBe('/projects/acme/web?card=issue-12');
     expect(links.board('acme/web', { kind: 'pr', number: 34 })).toBe('/projects/acme/web?card=pr-34');
+  });
+
+  it('opens the app viewer on main, a PR, or a PR beside main', () => {
+    expect(links.app('acme/web', { pr: null })).toBe('/projects/acme/web/app');
+    expect(links.app('acme/web', { pr: 7 })).toBe('/projects/acme/web/app?pr=7');
+    expect(links.app('acme/web', { pr: 7, compare: true })).toBe('/projects/acme/web/app?compare=7');
+    expect(links.app('acme/web', { compare: true })).toBe('/projects/acme/web/app');
   });
 
   it('encodes what a path cannot hold', () => {
