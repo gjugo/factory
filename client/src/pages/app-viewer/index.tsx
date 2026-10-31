@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Toggle } from '@/components/ui/toggle';
+import { useNow } from '@/hooks/use-now';
 import { projectName } from '@/hooks/use-project-rows';
 import { channelPulls, currentChannel, onOfficeComputer, prAsPreview, reachable, viewFromParams, type Channel } from '@/lib/channels';
 import { links, repoIdFrom } from '@/lib/links';
@@ -225,13 +226,8 @@ function AppViewer({ repo }: { repo: RepoView }) {
 /** Status, ref, commit and uptime of what's on screen. */
 function PreviewMeta({ preview, label }: { preview: PreviewView; label: string }) {
   const look = PREVIEW_STATUS[preview.status] ?? { label: preview.status, tone: 'neutral' as const };
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow();
   const up = preview.status === 'running' && preview.startedAt != null;
-  useEffect(() => {
-    if (!up) return;
-    const t = setInterval(() => setNow(Date.now()), 10_000);
-    return () => clearInterval(t);
-  }, [up]);
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
       <span role="status" aria-label={`${label}: ${look.label}`}>
