@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_NOTIFY, noteTab, notifySettings, officeUrl } from './notify.ts';
+import { links } from '../client/src/lib/links.ts';
+import { DEFAULT_NOTIFY, noteUrl, notifySettings, officeLink, officeUrl } from './notify.ts';
 
 describe('notification settings', () => {
   it('start with every event but merges on, on every channel', () => {
@@ -27,11 +28,29 @@ describe('notification settings', () => {
     expect(officeUrl('  ')).toBe('');
   });
 
-  it('open the pocket tab that fits the event', () => {
-    expect(noteTab('needsHuman')).toBe('approvals');
-    expect(noteTab('hire')).toBe('approvals');
-    expect(noteTab('ceoMessage')).toBe('chat');
-    expect(noteTab('agentError')).toBe('team');
-    expect(noteTab('merge')).toBe('company');
+  it('link each note to the page it is about', () => {
+    expect(noteUrl('needsHuman', { repoId: 'acme/web app', prNumber: 34 })).toBe('/projects/acme/web%20app?card=pr-34');
+    expect(noteUrl('needsHuman', { repoId: 'acme/web' })).toBe('/projects/acme/web');
+    expect(noteUrl('needsHuman')).toBe('/');
+    expect(noteUrl('ceoMessage')).toBe('/ceo');
+    expect(noteUrl('hire', { repoId: 'acme/web' })).toBe('/ceo');
+    expect(noteUrl('agentError', { agentId: 'a 1' })).toBe('/agents/a%201');
+    expect(noteUrl('agentError')).toBe('/agents');
+    expect(noteUrl('usage')).toBe('/');
+    expect(noteUrl('merge', { repoId: 'acme/web', prNumber: 3 })).toBe('/projects/acme/web');
+    expect(noteUrl('merge')).toBe('/projects');
+  });
+
+  it('match the dashboard routes', () => {
+    expect(noteUrl('needsHuman', { repoId: 'acme/web', prNumber: 34 })).toBe(links.board('acme/web', { kind: 'pr', number: 34 }));
+    expect(noteUrl('merge', { repoId: 'acme/web' })).toBe(links.board('acme/web'));
+    expect(noteUrl('agentError', { agentId: 'dev-1' })).toBe(links.agent('dev-1'));
+    expect(noteUrl('ceoMessage')).toBe(links.ceo());
+  });
+
+  it('put a link on the office address', () => {
+    expect(officeLink('', '/ceo')).toBe('');
+    expect(officeLink('https://pc.tail1.ts.net/', '/ceo')).toBe('https://pc.tail1.ts.net/ceo');
+    expect(officeLink('https://pc.tail1.ts.net/office', '/agents/a')).toBe('https://pc.tail1.ts.net/office/agents/a');
   });
 });

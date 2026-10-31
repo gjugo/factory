@@ -31,7 +31,7 @@ describe('the service worker', () => {
   it('names its cache by version, so an update drops the old one', () => {
     const src = serviceWorkerSource('0123456789ab');
     expect(src).toContain('const VERSION = "0123456789ab";');
-    expect(src).toContain("k.startsWith('cubefarm-shell-') && k !== CACHE");
+    expect(src).toContain("k.startsWith('factory-shell-') && k !== CACHE");
     expect(() => new vm.Script(src)).not.toThrow();
   });
 
@@ -48,5 +48,31 @@ describe('the service worker', () => {
     expect(handles('https://office.example/sw.js')).toBe(false);
     expect(handles('https://office.example/assets/index-abc123.js', { method: 'POST' })).toBe(false);
     expect(handles('https://fonts.googleapis.com/css2?family=Fredoka')).toBe(false);
+  });
+});
+
+describe("the service worker's notification click", () => {
+  function click(tabs: { url: string; focused?: boolean }[], url: string) {
+    const handlers: Record<string, (e: unknown) => void> = {};
+    const did: string[] = [];
+    const clients = {
+      matchAll: async () =>
+        tabs.map((t) => ({ ...t, focus: async () => void did.push(`focus ${t.url}`), postMessage: (m: { url: string }) => void did.push(`go ${t.url} → ${m.url}`) })),
+      openWindow: async (u: string) => void did.push(`open ${u}`),
+    };
+    const self = { addEventListener: (type: string, fn: (e: unknown) => void) => (handlers[type] = fn), location: { origin: 'https://office.example' }, clients };
+    vm.runInNewContext(serviceWorkerSource('v1'), { self, URL, caches: {}, fetch: () => undefined, Response: {} });
+    let done: Promise<unknown> = Promise.resolve();
+    handlers.notificationclick({ notification: { close: () => undefined, data: { url } }, waitUntil: (p: Promise<unknown>) => (done = p) });
+    return done.then(() => did);
+  }
+
+  it('opens the page in a new tab when no office tab is open', async () => {
+    expect(await click([{ url: 'https://elsewhere.example/' }], '/ceo')).toEqual(['open https://office.example/ceo']);
+  });
+
+  it('focuses a tab already on that page, or sends an open one there', async () => {
+    expect(await click([{ url: 'https://office.example/' }, { url: 'https://office.example/ceo' }], '/ceo')).toEqual(['go https://office.example/ceo → https://office.example/ceo', 'focus https://office.example/ceo']);
+    expect(await click([{ url: 'https://office.example/projects' }], '/agents/a1')).toEqual(['go https://office.example/projects → https://office.example/agents/a1', 'focus https://office.example/projects']);
   });
 });

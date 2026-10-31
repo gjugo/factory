@@ -1,5 +1,5 @@
 // Notification settings shared by the server (validation, defaults) and the settings UI (labels): which events the
-// office tells the manager about, on which channels, and the office URL messages link back to (docs/pocket.md).
+// office tells the manager about, on which channels, and the office URL messages link back to (docs/notifications.md).
 import type { NotifyChannel, NotifyEvent, NotifySettings, NotifyWebhook } from './types.ts';
 
 /** In the order the settings list them. */
@@ -55,10 +55,41 @@ export function notifySettings(base: NotifySettings, patch: unknown): NotifySett
   };
 }
 
-/** The pocket tab a notification about `event` opens. */
-export function noteTab(event: NotifyEvent | 'test'): string {
-  if (event === 'needsHuman' || event === 'hire') return 'approvals';
-  if (event === 'ceoMessage') return 'chat';
-  if (event === 'agentError') return 'team';
-  return 'company';
+/** What a note is about, so its link can open it: the project, the pull request, the agent. */
+export interface NoteTarget {
+  repoId?: string;
+  prNumber?: number;
+  agentId?: string;
+}
+
+const seg = (repoId: string) => repoId.split('/').map(encodeURIComponent).join('/');
+
+/**
+ * The dashboard page a note about `event` opens (the same paths as client/src/lib/links.ts): a PR that needs you its
+ * board card, the CEO's messages and team changes /ceo, a stuck agent their page, usage the overview, a merge the board.
+ */
+export function noteUrl(event: NotifyEvent | 'test', t: NoteTarget = {}): string {
+  const board = t.repoId?.includes('/') ? `/projects/${seg(t.repoId)}` : null;
+  switch (event) {
+    case 'needsHuman':
+      return board ? (t.prNumber ? `${board}?card=pr-${t.prNumber}` : board) : '/';
+    case 'ceoMessage':
+    case 'hire':
+      return '/ceo';
+    case 'agentError':
+      return t.agentId ? `/agents/${encodeURIComponent(t.agentId)}` : '/agents';
+    case 'merge':
+      return board ?? '/projects';
+    case 'test':
+      return '/settings';
+    default:
+      return '/';
+  }
+}
+
+/** `path` on the office's address for links (Settings → Notifications), or just the address when it's a bare one. */
+export function officeLink(officeUrl: string, path: string): string {
+  if (!officeUrl) return '';
+  const base = officeUrl.endsWith('/') ? officeUrl : `${officeUrl}/`;
+  return new URL(path.replace(/^\//, ''), base).toString();
 }

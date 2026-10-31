@@ -8,12 +8,14 @@ describe('crumbsFor', () => {
     expect(crumbsFor('/', names)).toEqual([{ label: 'Overview' }]);
     expect(crumbsFor('/projects', names)).toEqual([{ label: 'Projects' }]);
     expect(crumbsFor('/settings', names)).toEqual([{ label: 'Settings' }]);
+    expect(crumbsFor('/timelapse', names)).toEqual([{ label: 'Time-lapse' }]);
     expect(crumbsFor('/nope', names)).toEqual([{ label: 'Not found' }]);
   });
 
   it('links back up from a project, its settings and an agent', () => {
     expect(crumbsFor('/projects/acme/web', names)).toEqual([{ label: 'Projects', to: '/projects' }, { label: 'web' }]);
     expect(crumbsFor('/projects/acme/web/settings', names)).toEqual([{ label: 'Projects', to: '/projects' }, { label: 'web', to: '/projects/acme/web' }, { label: 'Settings' }]);
+    expect(crumbsFor('/projects/acme/web/app', names)).toEqual([{ label: 'Projects', to: '/projects' }, { label: 'web', to: '/projects/acme/web' }, { label: 'App' }]);
     expect(crumbsFor('/agents/ken', names)).toEqual([{ label: 'Agents', to: '/agents' }, { label: 'Ken' }]);
   });
 

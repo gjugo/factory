@@ -26,7 +26,9 @@ async function run(fn: () => Promise<unknown>) {
 export function AgentActions({ agent }: { agent: Agent }) {
   const navigate = useNavigate();
   const defaultCli = useStore((s) => s.settings.defaultCli);
+  const replaying = useStore((s) => s.replaying);
   const [busy, setBusy] = useState(false);
+  const off = busy || replaying; // nothing acts on a replayed agent (replay.ts)
   const ceo = agent.role === 'ceo';
   const working = isBusyStatus(agent.status);
   const act = async (fn: () => Promise<unknown>) => {
@@ -49,23 +51,23 @@ export function AgentActions({ agent }: { agent: Agent }) {
   return (
     <>
       {working && (
-        <Button variant="destructive" size="sm" disabled={busy} onClick={() => act(() => api.stop(agent.id))}>
+        <Button variant="destructive" size="sm" disabled={off} onClick={() => act(() => api.stop(agent.id))}>
           <Square /> Stop
         </Button>
       )}
       {!ceo && !working && <AssignButton agent={agent} />}
       {!ceo && !working && agent.status !== 'idle' && (
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => act(() => api.reset(agent.id))} title="Clear their task so they're free for new work">
+        <Button variant="outline" size="sm" disabled={off} onClick={() => act(() => api.reset(agent.id))} title="Clear their task so they're free for new work">
           <RotateCcw /> Reset
         </Button>
       )}
       {!ceo && agent.host === 'box' && (
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => act(() => api.signIn(agent.id))} title={signInFor(agent, { defaultCli }) ? 'Show a new sign-in link in their terminal' : 'Sign their coding agent in again, in their terminal'}>
+        <Button variant="outline" size="sm" disabled={off} onClick={() => act(() => api.signIn(agent.id))} title={signInFor(agent, { defaultCli }) ? 'Show a new sign-in link in their terminal' : 'Sign their coding agent in again, in their terminal'}>
           <KeyRound /> Sign in
         </Button>
       )}
       {!ceo && (
-        <Button variant="ghost" size="sm" disabled={busy} onClick={fire} className="text-destructive hover:text-destructive">
+        <Button variant="ghost" size="sm" disabled={off} onClick={fire} className="text-destructive hover:text-destructive">
           <UserMinus /> Let go
         </Button>
       )}
@@ -78,6 +80,7 @@ function AssignButton({ agent }: { agent: Agent }) {
   const repo = useStore((s) => s.repos.find((r) => r.id === agent.repoId));
   const agents = useStore((s) => s.agents);
   const qa = useStore((s) => s.qa);
+  const replaying = useStore((s) => s.replaying);
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState('');
   const [busy, setBusy] = useState(false);
@@ -101,7 +104,7 @@ function AssignButton({ agent }: { agent: Agent }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" disabled={replaying}>
           <Play /> Assign
         </Button>
       </DialogTrigger>

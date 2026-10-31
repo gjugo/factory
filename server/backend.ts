@@ -94,7 +94,7 @@ export interface Backend {
   voice: VoiceApi;
   /** The real local weather for Settings → Weather (Open-Meteo, keyless; only coordinates are sent once a city is found). */
   weather: WeatherApi;
-  /** Notifications to the chat apps and push services (docs/pocket.md). */
+  /** Notifications to the chat apps and push services (docs/notifications.md). */
   notify: NotifyTransport;
   /** Cloud agents (docs/cloud.md): Upstash's Box API (the demo's is fake), and picking their CLIs up after a restart. */
   cloud: CloudBackend;

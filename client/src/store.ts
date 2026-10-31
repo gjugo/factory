@@ -73,9 +73,14 @@ interface State {
   ceoOpen: boolean;
   /** CEO threads on screen (the sheet's or the CEO page's): while any is, CEO messages are being read and don't toast. */
   chatViews: number;
+  /** The time-lapse (replay.ts) is showing a recorded stretch: live events wait, live actions are off. */
+  replaying: boolean;
 
-  /** Folds an event into the state. */
-  apply(ev: ServerEvent): void;
+  /**
+   * Folds an event into the state. The time-lapse passes `replay`: 'play' while it plays, 'seek' while it jumps. A
+   * replayed event never toasts.
+   */
+  apply(ev: ServerEvent, replay?: 'play' | 'seek'): void;
   setConnected(v: boolean): void;
   setRestarting(v: boolean): void;
   setOfficeUpdate(u: OfficeUpdateView): void;
@@ -87,6 +92,7 @@ interface State {
   setCeoOpen(v: boolean): void;
   /** A CEO thread mounted (+1) or unmounted (-1). */
   watchChat(by: 1 | -1): void;
+  setReplaying(v: boolean): void;
   pushToast(level: ToastLevel, text: string): void;
 }
 
@@ -160,10 +166,11 @@ export const useStore = create<State>((set, get) => ({
   workers: 0,
   ceoOpen: false,
   chatViews: 0,
+  replaying: false,
 
-  apply(ev) {
-    // Toasts for news compare the old state with the new; snapshots (page load, reconnect) never toast.
-    const live = get().loaded;
+  apply(ev, replay) {
+    // Toasts for news compare the old state with the new; snapshots (page load, reconnect) and replays never toast.
+    const live = get().loaded && !replay;
     switch (ev.type) {
       case 'snapshot': {
         const d: WorldSnapshot = ev.data;
@@ -398,6 +405,7 @@ export const useStore = create<State>((set, get) => ({
   watchWorkers: (by) => set({ workers: Math.max(0, get().workers + by) }),
   setCeoOpen: (ceoOpen) => set({ ceoOpen }),
   watchChat: (by) => set({ chatViews: Math.max(0, get().chatViews + by) }),
+  setReplaying: (replaying) => set({ replaying }),
   pushToast(level, text) {
     if (level === 'error') toast.error(text, { duration: 9000 });
     else if (level === 'success') toast.success(text);

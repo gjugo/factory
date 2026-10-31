@@ -1,8 +1,9 @@
 // The demo's sample day (docs/how-it-works.md, "Time-lapse"): a made-up working day on the demo's own floors and
 // people, 08:30 to 18:00, journaled like a real one so a fresh demo office has a day to replay: issues picked up, PRs
 // opened, QA rounds (some failed and fixed, one needing the manager), merges, the CEO filing issues and a spell of
-// pacing. Seeded, so the same office gives the same day.
+// pacing, with mission control's numbers along. Seeded, so the same office gives the same day.
 import { compress, FRAME_MESSAGES, KEYFRAME_MS, type JournalAgent, type JournalEvent, type JournalFrame, type JournalLine } from '../shared/journal.ts';
+import { emptyHistory, opsView, type OpsFloorState } from './metrics.ts';
 import { CEO_ID, INSTALL_STEP, type ActivityKind, type AgentActivity, type CeoInfo, type IssueInfo, type PhoneMessage, type PullInfo, type QaView, type RepoView, type TickerItem, type UsageView } from '../shared/types.ts';
 
 /** A small seeded random number generator (mulberry32), in [0, 1). */
@@ -94,6 +95,8 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
   const restUntil = new Map<string, number>();
   const checksAt = new Map<string, number>(); // `${repoId}#${pr}` -> when its checks pass
   const merges: { repoId: string; n: number; at: number }[] = [];
+  const history = emptyHistory(); // mission control's merges and QA verdicts so far
+  let lastOps = '';
   let merged = 0;
   let stuck = 0;
   let msgId = 900_000;
@@ -121,7 +124,7 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
     messages.push(m);
     ev({ type: 'message', message: m });
   };
-  const frame = (): JournalFrame => clone({ repos, agents, qa: [...qa.values()], requests: [], ceo, messages: messages.slice(-FRAME_MESSAGES), usage, ticker: ticker.slice(-30) });
+  const frame = (): JournalFrame => clone({ repos, agents, qa: [...qa.values()], requests: [], ceo, messages: messages.slice(-FRAME_MESSAGES), usage, ticker: ticker.slice(-30), ops: opsNow() });
   const qaKey = (repoId: string, n: number) => `${repoId}#${n}`;
 
   function newIssue(r: Pick<RepoView, 'url'>, n: number, title: string, at: number): IssueInfo {
@@ -133,6 +136,21 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
     for (const j of jobs.values()) if (j.kind === 'issue' && j.repoId === repo.id) out.add(j.n);
     return out;
   };
+
+  /** Mission control as the office would show it now (server/swarm.ts opsNow). */
+  function opsNow() {
+    const floors: OpsFloorState[] = repos.map((r) => {
+      const taken = claimed(r);
+      return {
+        repoId: r.id,
+        floor: r.floor,
+        ready: r.issues.filter((i) => !taken.has(i.number)).length,
+        agents: agents.filter((a) => a.repoId === r.id),
+        prs: r.pulls.filter((p) => p.state === 'OPEN').map((p) => ({ number: p.number, qa: qa.get(qaKey(r.id, p.number)) ?? null, why: null })),
+      };
+    });
+    return opsView(floors, history, t);
+  }
 
   function start(a: JournalAgent, job: Job, patch: Partial<JournalAgent>) {
     jobs.set(a.id, job);
@@ -186,6 +204,7 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
     const q = qa.get(qaKey(job.repoId, job.n));
     rest(a, { status: 'done' });
     if (!q) return;
+    history.qa.push([t, job.repoId, job.verdict === 'pass', null]);
     if (job.verdict === 'pass') {
       Object.assign(q, { status: 'passed', mergeNote: null });
       tick(job.repoId, `${a.name} passed PR #${job.n} ✅`, 'good');
@@ -209,6 +228,9 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
     const q = qa.get(qaKey(repoId, n));
     qa.delete(qaKey(repoId, n));
     ev({ type: 'qaRemoved', repoId, prNumber: n });
+    // The demo's own issues were opened today, after this made-up day: their lead time is unknown.
+    const opened = Date.parse(repo.issues.find((i) => pr.closesIssues.includes(i.number))?.createdAt ?? '');
+    history.merges.push([t, repoId, n, opened <= t ? t - opened : null]);
     Object.assign(pr, { state: 'MERGED', mergedAt: iso(t), checks: 'passing' });
     repo.issues = repo.issues.filter((i) => !pr.closesIssues.includes(i.number));
     // GitHub's list (github.ts) has the open PRs and the last 8 merged.
@@ -347,6 +369,13 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
         prUrl: null,
         currentTool: INSTALL_STEP,
       });
+    }
+
+    const ops = opsNow();
+    const key = JSON.stringify(ops);
+    if (key !== lastOps) {
+      lastOps = key;
+      ev({ type: 'ops', ops });
     }
   }
   return compress(lines);

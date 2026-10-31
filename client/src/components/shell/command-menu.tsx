@@ -1,4 +1,4 @@
-import { Bot, Crown, FolderGit2, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
+import { Bot, Crown, FolderGit2, History, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { StatusDot } from '@/components/shared/status-badge';
@@ -17,6 +17,7 @@ const PAGES = [
   { label: 'Add a project', to: links.addProject(), icon: Plus },
   { label: 'Agents', to: links.agents(), icon: Bot },
   { label: 'CEO', to: links.ceo(), icon: Crown },
+  { label: 'Time-lapse', to: links.timelapse(), icon: History },
   { label: 'Settings', to: links.settings(), icon: Settings },
 ];
 
@@ -50,7 +51,7 @@ export function CommandMenu() {
       <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2 text-muted-foreground" aria-label="Search (⌘K)">
         <Search className="size-3.5" aria-hidden />
         <span className="hidden xl:inline">Search…</span>
-        <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] xl:inline">⌘K</kbd>
+        <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] text-foreground xl:inline">⌘K</kbd>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} title="Jump to" description="A page, a project or an agent">
         <CommandInput placeholder="Jump to a page, project or agent…" />

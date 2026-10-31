@@ -18,6 +18,7 @@ import { useTheme } from '@/lib/theme';
 import { useStore } from '@/store';
 import { modelSuggestions } from '../../../../shared/models';
 import { UI_THEMES, type UiTheme } from '../../../../shared/ui';
+import { NotificationSettings } from './notifications-card';
 import { EnvironmentCard, OfficeUpdateCard } from './office-info';
 import { VoiceSettingsSection } from './voice-settings';
 
@@ -36,6 +37,7 @@ export default function SettingsPage() {
           <EnvironmentCard />
         </div>
       </div>
+      <NotificationSettings />
       <VoiceSettingsSection />
     </div>
   );

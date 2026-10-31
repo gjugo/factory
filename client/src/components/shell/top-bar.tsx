@@ -16,6 +16,7 @@ import { CeoSheet } from './ceo-sheet';
 import { CommandMenu } from './command-menu';
 import { ConnectionStatus } from './connection-status';
 import { ProjectSwitcher } from './project-switcher';
+import { ReplayBadge } from './replay-bar';
 import { ThemeToggle } from './theme-toggle';
 
 /**
@@ -58,6 +59,7 @@ export function TopBar() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <ReplayBadge />
         <div className="hidden md:block">
           <ProjectSwitcher />
         </div>
