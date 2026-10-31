@@ -57,7 +57,7 @@ export const TMUX_CONF = [
   '',
 ].join('\n');
 
-/** The one-time setup of a Box: tools, the pinned CLIs, git, and the office's folders. Prints CUBEFARM_SETUP_OK. */
+/** The one-time setup of a Box: tools, the pinned CLIs, git, and the office's folders. Prints FACTORY_SETUP_OK. */
 export function setupScript(o: { versions: BoxVersions; rev: number; gitName: string; gitEmail: string }): string {
   const marker = setupMarker(o.versions, o.rev);
   const pkgs = [`@anthropic-ai/claude-code@${o.versions.claude}`, `@playwright/mcp@${o.versions.playwrightMcp}`, `@openai/codex@${o.versions.codex}`];
@@ -67,7 +67,7 @@ export function setupScript(o: { versions: BoxVersions; rev: number; gitName: st
   return [
     'set -e',
     `mkdir -p ${sq(BOX_BIN)} ${sq(BOX_SESSIONS)}`,
-    `if [ -f ${sq(marker)} ]; then echo CUBEFARM_SETUP_OK; exit 0; fi`,
+    `if [ -f ${sq(marker)} ]; then echo FACTORY_SETUP_OK; exit 0; fi`,
     'missing=""',
     'for t in tmux lsof gh; do command -v "$t" >/dev/null 2>&1 || missing="$missing $t"; done',
     'if [ -n "$missing" ]; then',
@@ -76,17 +76,17 @@ export function setupScript(o: { versions: BoxVersions; rev: number; gitName: st
     'fi',
     'command -v tmux >/dev/null 2>&1 || { echo "tmux could not be installed in the Box" >&2; exit 3; }',
     // Into the office's own folder, not the image's global one: the Box image ships its own CLIs first on the PATH.
-    `npm install -g --prefix ${sq(`${BOX_CF}/cli`)} --no-fund --no-audit --loglevel=error ${pkgs.map(sq).join(' ')} > /tmp/cubefarm-cli.log 2>&1 || { tail -n 5 /tmp/cubefarm-cli.log >&2; exit 4; }`,
+    `npm install -g --prefix ${sq(`${BOX_CF}/cli`)} --no-fund --no-audit --loglevel=error ${pkgs.map(sq).join(' ')} > /tmp/factory-cli.log 2>&1 || { tail -n 5 /tmp/factory-cli.log >&2; exit 4; }`,
     `for c in claude codex playwright-mcp; do test -x ${sq(BOX_CLI_BIN)}/$c || { echo "$c was not installed" >&2; exit 4; }; done`,
     'git config --global --unset-all credential.helper >/dev/null 2>&1 || true',
     `git config --global credential.https://github.com.helper ${sq(helper)}`,
-    `git config --global user.name ${sq(o.gitName || 'cubefarm')}`,
-    `git config --global user.email ${sq(o.gitEmail || 'cubefarm@users.noreply.github.com')}`,
+    `git config --global user.name ${sq(o.gitName || 'factory')}`,
+    `git config --global user.email ${sq(o.gitEmail || 'factory@users.noreply.github.com')}`,
     'git config --global init.defaultBranch main',
     'git config --global advice.detachedHead false',
     `rm -f ${sq(BOX_CF)}/setup-*`,
     `touch ${sq(marker)}`,
-    'echo CUBEFARM_SETUP_OK',
+    'echo FACTORY_SETUP_OK',
   ].join('\n');
 }
 
@@ -110,7 +110,7 @@ export function prepareDeskScript(fullName: string, base: DeskBase, branch: stri
     'if [ ! -d "$R/.git" ]; then',
     '  rm -rf "$R"; mkdir -p "$(dirname "$R")"',
     `  git clone -q --no-checkout ${sq(`https://github.com/${fullName}.git`)} "$R"`,
-    `  printf '%s\\n' '# added by cubefarm' '.playwright-mcp/' '.preview-tmp/' >> "$R/.git/info/exclude"`,
+    `  printf '%s\\n' '# added by factory' '.playwright-mcp/' '.preview-tmp/' >> "$R/.git/info/exclude"`,
     'fi',
     'cd "$R"',
     'git fetch -q origin --prune',
@@ -164,7 +164,7 @@ export function depsScript(fullName: string, install = true): string {
     'M=node_modules/.factory-preview-install',
     'if [ -d node_modules ] && [ "$(cat "$M" 2>/dev/null)" = "$H" ]; then echo DEPS_SKIPPED; exit 0; fi',
     install
-      ? 'if NO_COLOR=1 npm ci --no-audit --no-fund > /tmp/cubefarm-npm.log 2>&1; then echo "$H" > "$M"; echo DEPS_INSTALLED; else tail -n 3 /tmp/cubefarm-npm.log; echo DEPS_FAILED; fi'
+      ? 'if NO_COLOR=1 npm ci --no-audit --no-fund > /tmp/factory-npm.log 2>&1; then echo "$H" > "$M"; echo DEPS_INSTALLED; else tail -n 3 /tmp/factory-npm.log; echo DEPS_FAILED; fi'
       : 'echo DEPS_STALE',
   ].join('\n');
 }
@@ -233,17 +233,17 @@ export const tmuxList = () => `for s in /tmp/tmux-$(id -u)/cf-*; do [ -S "$s" ] 
 
 /**
  * Is the Box's own copy of the CLI signed in? Only the exit code is looked at: the status itself (an email address,
- * an account) never leaves the Box. Prints CUBEFARM_SIGNED_IN or CUBEFARM_SIGNED_OUT.
+ * an account) never leaves the Box. Prints FACTORY_SIGNED_IN or FACTORY_SIGNED_OUT.
  */
 export function signInCheckScript(cli: 'claude' | 'codex'): string {
   const status = cli === 'claude' ? `${sq(`${BOX_CLI_BIN}/claude`)} auth status --json` : `${sq(`${BOX_CLI_BIN}/codex`)} login status`;
-  return `if ${status} >/dev/null 2>&1; then echo CUBEFARM_SIGNED_IN; else echo CUBEFARM_SIGNED_OUT; fi`;
+  return `if ${status} >/dev/null 2>&1; then echo FACTORY_SIGNED_IN; else echo FACTORY_SIGNED_OUT; fi`;
 }
 
 /** What signInCheckScript said: true, false, or null when it didn't run. */
 export function signInOutcome(output: string): boolean | null {
-  const last = output.split('\n').map((l) => l.trim()).filter((l) => /^CUBEFARM_SIGNED_(IN|OUT)$/.test(l)).pop();
-  return last ? last === 'CUBEFARM_SIGNED_IN' : null;
+  const last = output.split('\n').map((l) => l.trim()).filter((l) => /^FACTORY_SIGNED_(IN|OUT)$/.test(l)).pop();
+  return last ? last === 'FACTORY_SIGNED_IN' : null;
 }
 
 /** Forget a login the CLI's servers turned away, so the next check says signed out until the manager signs in again. */

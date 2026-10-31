@@ -178,7 +178,7 @@ export class BoxMachines implements MachineProvider {
     this.setState(machine, 'setting-up');
     const git = await this.deps.git();
     const setup = await api.run(id, setupScript({ versions: this.deps.versions, rev: SETUP_REV, gitName: git.name, gitEmail: git.email }), { timeoutMs: SETUP_TIMEOUT_MS });
-    if (setup.code !== 0 || !setup.output.includes('CUBEFARM_SETUP_OK')) throw failure("Couldn't set up the cloud machine", setup.output, this.deps.secrets());
+    if (setup.code !== 0 || !setup.output.includes('FACTORY_SETUP_OK')) throw failure("Couldn't set up the cloud machine", setup.output, this.deps.secrets());
     for (const [name, source] of Object.entries(BOX_HELPERS)) await api.write(id, `${BOX_BIN}/${name}`, source);
     await api.write(id, BOX_TMUX_CONF, TMUX_CONF);
     this.setState(machine, 'ready');

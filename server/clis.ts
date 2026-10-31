@@ -192,9 +192,9 @@ export interface Launch {
   env: Record<string, string>;
 }
 
-/** A local model server's address: `CUBEFARM_<ID>_URL` (e.g. CUBEFARM_OLLAMA_URL) when set, else its usual one. */
+/** A local model server's address: `FACTORY_<ID>_URL` (e.g. FACTORY_OLLAMA_URL) when set, else its usual one. */
 export function localUrl(p: LocalProvider, env: NodeJS.ProcessEnv = process.env): string {
-  return env[`CUBEFARM_${p.id.toUpperCase()}_URL`]?.trim() || p.url;
+  return env[`FACTORY_${p.id.toUpperCase()}_URL`]?.trim() || p.url;
 }
 
 /** Codex on a local model: its own --oss for Ollama and LM Studio at their usual address, else a provider of the office's. */
@@ -225,7 +225,7 @@ const EFFORT_CODEX: Record<EffortLevel, string> = { low: 'low', medium: 'medium'
 export const CODEX_HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Interrupt'];
 
 /**
- * The command Codex runs for each hook. It never changes (the office's address travels in CUBEFARM_HOOK_URL), so the
+ * The command Codex runs for each hook. It never changes (the office's address travels in FACTORY_HOOK_URL), so the
  * manager trusts the hooks once in Codex's /hooks and that holds for every session. On Windows, Codex runs it through
  * PowerShell or cmd depending on its version, and a command starting with a quote fails in both: plain `node` (on the
  * PATH the office gave it) and the script in double quotes work in either. Elsewhere it goes through the shell.
@@ -283,7 +283,7 @@ export function launchArgs(id: AgentCli, ctx: LaunchContext): Launch {
         // the credential store, so git and gh fail in it).
         '--dangerously-bypass-approvals-and-sandbox',
       ];
-      return { args: ctx.resumeId ? ['resume', ...args, ctx.resumeId, ctx.prompt] : [...args, '--', ctx.prompt], env: { CUBEFARM_HOOK_URL: ctx.notify.url } };
+      return { args: ctx.resumeId ? ['resume', ...args, ctx.resumeId, ctx.prompt] : [...args, '--', ctx.prompt], env: { FACTORY_HOOK_URL: ctx.notify.url } };
     }
     case 'opencode': {
       const local = localModel(ctx.model);
@@ -304,7 +304,7 @@ export function launchArgs(id: AgentCli, ctx: LaunchContext): Launch {
         '--prompt',
         ctx.prompt,
       ];
-      return { args, env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config), CUBEFARM_NOTIFY_URL: ctx.notify.url } };
+      return { args, env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config), FACTORY_NOTIFY_URL: ctx.notify.url } };
     }
   }
 }
@@ -431,7 +431,7 @@ if (event.type === 'agent-turn-complete') {
 
 /** Codex's hook program: passes what Codex tells a hook on to the office and answers nothing, so Codex carries on as usual. */
 export const CODEX_HOOK_SOURCE = String.raw`// cubefarm: Codex's hooks. Tells the office what Codex is doing; never changes what it does.
-const url = process.env.CUBEFARM_HOOK_URL;
+const url = process.env.FACTORY_HOOK_URL;
 const chunks = [];
 process.stdin.on('data', (c) => chunks.push(c));
 process.stdin.on('end', async () => {
@@ -444,8 +444,8 @@ process.stdin.on('end', async () => {
 
 /** OpenCode plugin: reports its session and when it goes idle (a turn is complete). No imports: loaded from a file. */
 export const OPENCODE_PLUGIN_SOURCE = String.raw`// cubefarm: tells the office when OpenCode's session goes idle.
-export default async function CubefarmPlugin({ client } = {}) {
-  const url = process.env.CUBEFARM_NOTIFY_URL;
+export default async function FactoryPlugin({ client } = {}) {
+  const url = process.env.FACTORY_NOTIFY_URL;
   if (!url) return {};
   let root;
   const post = (body) =>

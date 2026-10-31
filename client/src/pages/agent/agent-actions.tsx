@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { KeyRound, Play, RotateCcw, Square, UserMinus } from 'lucide-react';
+import { Play, RotateCcw, Square, UserMinus } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { confirmDialog } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api } from '@/api';
-import { assignChoices, isBusyStatus, signInFor } from '@/lib/agents';
+import { assignChoices, isBusyStatus } from '@/lib/agents';
 import { links } from '@/lib/links';
 import { agentsOnRepo, kanbanFor, useStore, type Agent } from '@/store';
 
-// An agent's actions: stop a session, clear their desk, give them an issue or a PR to test, sign a cloud agent in
-// again, and let them go. The office's events update every tab, this one included.
+// An agent's actions: stop a session, clear their desk, give them an issue or a PR to test, and let them go. Signing
+// a cloud agent in is the page's needs-sign-in banner. The office's events update every tab, this one included.
 
 async function run(fn: () => Promise<unknown>) {
   try {
@@ -25,7 +25,6 @@ async function run(fn: () => Promise<unknown>) {
 
 export function AgentActions({ agent }: { agent: Agent }) {
   const navigate = useNavigate();
-  const defaultCli = useStore((s) => s.settings.defaultCli);
   const replaying = useStore((s) => s.replaying);
   const [busy, setBusy] = useState(false);
   const off = busy || replaying; // nothing acts on a replayed agent (replay.ts)
@@ -59,11 +58,6 @@ export function AgentActions({ agent }: { agent: Agent }) {
       {!ceo && !working && agent.status !== 'idle' && (
         <Button variant="outline" size="sm" disabled={off} onClick={() => act(() => api.reset(agent.id))} title="Clear their task so they're free for new work">
           <RotateCcw /> Reset
-        </Button>
-      )}
-      {!ceo && agent.host === 'box' && (
-        <Button variant="outline" size="sm" disabled={off} onClick={() => act(() => api.signIn(agent.id))} title={signInFor(agent, { defaultCli }) ? 'Show a new sign-in link in their terminal' : 'Sign their coding agent in again, in their terminal'}>
-          <KeyRound /> Sign in
         </Button>
       )}
       {!ceo && (

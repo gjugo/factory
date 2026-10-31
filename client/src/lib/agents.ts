@@ -3,6 +3,7 @@ import { CLAUDE_MODELS, effectiveModel } from '../../../shared/models';
 import type { AgentCli, AgentStatus, CliView, CloudMachineState, EffortLevel, RepoView, SwarmSettings } from '../../../shared/types';
 import type { Agent, KanbanColumns } from '../store';
 import { links } from './links';
+import type { Tone } from './status';
 
 // How the agents pages put an agent into words (their coding agent, task, activity, machine), which of them a filter
 // keeps, and which ones the terminal grid watches. Pure, so the wording and the picking are tested.
@@ -39,18 +40,27 @@ export function signInFor(a: Pick<Agent, 'cli' | 'role' | 'host' | 'needsSignIn'
   return a.role !== 'ceo' && a.host === 'box' && a.needsSignIn ? CLI_NAMES[a.cli || settings.defaultCli] : null;
 }
 
-const CLOUD_STATE: Record<CloudMachineState, string> = {
-  none: 'no Box yet',
-  creating: 'creating',
-  'setting-up': 'setting up',
-  ready: 'ready',
-  paused: 'paused',
-  disconnected: 'reconnecting',
-  error: 'failed',
+/** A cloud agent's Box, as their machine badge shows it. */
+export const CLOUD_STATE: Record<CloudMachineState, { label: string; tone: Tone }> = {
+  none: { label: 'No Box yet', tone: 'neutral' },
+  creating: { label: 'Creating', tone: 'info' },
+  'setting-up': { label: 'Setting up', tone: 'info' },
+  ready: { label: 'Ready', tone: 'success' },
+  paused: { label: 'Paused', tone: 'neutral' },
+  disconnected: { label: 'Disconnected', tone: 'warning' },
+  error: { label: 'Error', tone: 'danger' },
 };
 
-/** Where they work: "This computer", or "Cloud · ready". */
-export const machineLabel = (a: Pick<Agent, 'host' | 'cloud'>) => (a.host === 'box' ? `Cloud · ${CLOUD_STATE[a.cloud ?? 'none']}` : 'This computer');
+/**
+ * Whether their Settings can move them between this computer and the cloud: never while they have a task (the
+ * server refuses), and to the cloud only once an Upstash key is saved. The reason when it can't, else null.
+ */
+export function moveBlocked(a: Pick<Agent, 'role' | 'task' | 'status' | 'host'>, keySet: boolean): string | null {
+  if (a.role === 'ceo') return 'The CEO always works on this computer.';
+  if (a.task || isBusyStatus(a.status)) return 'They’re on a task: move them once it’s done.';
+  if (a.host !== 'box' && !keySet) return 'Save an Upstash Box API key in Settings → Cloud agents first.';
+  return null;
+}
 
 export type TaskKind = 'build' | 'qa' | 'fix';
 

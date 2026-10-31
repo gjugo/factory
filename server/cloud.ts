@@ -1,6 +1,6 @@
 // The cloud account (docs/cloud.md): the Upstash Box API key, and what cloud agents sign in with. Keys and tokens the
 // manager pastes live in secrets.json (never in the state, the snapshot, events, logs or a Box's files). The Claude
-// subscription token is read from the office's environment (CUBEFARM_CLAUDE_TOKEN) and never written down: Anthropic's
+// subscription token is read from the office's environment (FACTORY_CLAUDE_TOKEN) and never written down: Anthropic's
 // terms bar apps like this one from storing Claude.ai tokens. A Box gets each credential only as the environment of
 // the one command that needs it. Without one for its CLI, a cloud agent's CLI uses its own login in their Box, which
 // the manager signs in once in the agent's terminal (Swarm's sign-in): the office never sees that login.
@@ -11,9 +11,9 @@ import { CloudError, type BoxApi, type BoxInfo } from './box.ts';
 import type { AgentCli, CloudCredentialView, CloudView } from '../shared/types.ts';
 
 /** The environment variable the manager keeps their `claude setup-token` token in. */
-export const CLAUDE_TOKEN_ENV = 'CUBEFARM_CLAUDE_TOKEN';
+export const CLAUDE_TOKEN_ENV = 'FACTORY_CLAUDE_TOKEN';
 /** Where a Box session keeps the Anthropic API key for Claude Code's apiKeyHelper (not ANTHROPIC_API_KEY, which asks first). */
-export const ANTHROPIC_KEY_ENV = 'CUBEFARM_ANTHROPIC_KEY';
+export const ANTHROPIC_KEY_ENV = 'FACTORY_ANTHROPIC_KEY';
 
 export interface CloudSecrets {
   upstashBoxKey?: string;
@@ -30,16 +30,23 @@ const TOKEN_FIELD: Record<CloudTokenKind, keyof CloudSecrets> = { github: 'cloud
 /** An office's id on a shared Upstash account: 6 lowercase letters and digits. */
 export const officeId = () => Math.random().toString(36).slice(2, 8).padEnd(6, '0');
 
+/** The label every factory Box carries, so a cubefarm office (or any other app) sharing the account never counts as ours. */
+export const BOX_APP_LABEL = 'factory';
+
 /**
- * A cloud agent's Box: `cubefarm-<office>-<machine>`, so it stands out among Boxes the account has for other apps,
- * and labels Upstash accepts (≤ 20 characters each, ≤ 5).
+ * A cloud agent's Box: `factory-<office>-<machine>`, so it stands out among Boxes the account has for other apps
+ * (cubefarm's are `cubefarm-…`, labelled `cubefarm` / `cf:<office>`), and labels Upstash accepts (≤ 20 characters
+ * each, ≤ 5).
  */
-export const boxName = (office: string, machine: string) => `cubefarm-${office}-${machine}`;
-export const boxLabels = (office: string, machine: string) => ['cubefarm', `cf:${office}`, `m:${machine}`];
+export const boxName = (office: string, machine: string) => `factory-${office}-${machine}`;
+export const boxLabels = (office: string, machine: string) => [BOX_APP_LABEL, `fo:${office}`, `m:${machine}`];
+
+/** This office's Box: factory's label and the office's own. Anything else on the account is never touched. */
+export const isOfficeBox = (box: Pick<BoxInfo, 'labels'>, office: string) => box.labels.includes(BOX_APP_LABEL) && box.labels.includes(`fo:${office}`);
 
 /** The machine a Box is for when it's this office's, else null. */
 export function machineOfBox(box: Pick<BoxInfo, 'labels'>, office: string): string | null {
-  if (!box.labels.includes(`cf:${office}`)) return null;
+  if (!isOfficeBox(box, office)) return null;
   return box.labels.find((l) => l.startsWith('m:'))?.slice(2) || null;
 }
 
@@ -255,7 +262,7 @@ export class Cloud {
       const all = await this.api.list();
       const office = this.deps.office();
       const machines = this.deps.machines();
-      const ours = all.filter((b) => b.labels.includes(`cf:${office}`));
+      const ours = all.filter((b) => isOfficeBox(b, office));
       this.boxes = {
         total: all.filter((b) => b.status !== 'deleted').length,
         running: ours.filter((b) => b.status === 'running' || b.status === 'idle' || b.status === 'creating').length,
@@ -273,12 +280,12 @@ export class Cloud {
     }
   }
 
-  /** POST /api/cloud/orphans: delete this office's Boxes whose agent is gone. */
+  /** POST /api/cloud/orphans: delete this office's Boxes whose agent is gone (never another app's, cubefarm's included). */
   async deleteOrphans(): Promise<{ deleted: number }> {
     if (!this.api) throw new HttpError(400, 'Save your Upstash Box API key first.');
     const office = this.deps.office();
     const machines = this.deps.machines();
-    const doomed = (await this.count()).filter((b) => b.labels.includes(`cf:${office}`) && !machines.has(machineOfBox(b, office) ?? ''));
+    const doomed = (await this.count()).filter((b) => isOfficeBox(b, office) && !machines.has(machineOfBox(b, office) ?? ''));
     let deleted = 0;
     for (const b of doomed) {
       await this.api

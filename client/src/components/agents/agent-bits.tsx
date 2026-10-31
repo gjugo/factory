@@ -1,9 +1,10 @@
 import { AlertTriangle, Cloud, ExternalLink, KeyRound, Monitor } from 'lucide-react';
 import { Link } from 'react-router';
 import type { LogLine } from '../../../../shared/types';
+import { ToneBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { useNow } from '@/hooks/use-now';
-import { activityLabel, cliLabel, costLabel, effortLabel, elapsedLabel, isBusyStatus, machineLabel, modelLabel, signInFor, taskInfo } from '@/lib/agents';
+import { activityLabel, cliLabel, costLabel, effortLabel, elapsedLabel, isBusyStatus, CLOUD_STATE, modelLabel, signInFor, taskInfo } from '@/lib/agents';
 import { cn } from '@/lib/utils';
 import { useStore, type Agent } from '@/store';
 
@@ -72,17 +73,20 @@ export function SetupLine({ agent, className }: { agent: Agent; className?: stri
   );
 }
 
-/** Where they work, and a badge when their coding agent waits to be signed in. */
+/** Where they work (a cloud agent's Box state as a badge), and a badge when their coding agent waits to be signed in. */
 export function Machine({ agent, className }: { agent: Agent; className?: string }) {
   const defaultCli = useStore((s) => s.settings.defaultCli);
   const signIn = signInFor(agent, { defaultCli });
-  const Icon = agent.host === 'box' ? Cloud : Monitor;
+  const box = agent.host === 'box';
+  const Icon = box ? Cloud : Monitor;
+  const state = CLOUD_STATE[agent.cloud ?? 'none'];
   return (
     <span className={cn('flex min-w-0 flex-wrap items-center gap-1.5', className)}>
       <span className="flex items-center gap-1 text-muted-foreground">
         <Icon className="size-3.5 shrink-0" aria-hidden />
-        {machineLabel(agent)}
+        {box ? 'Cloud' : 'This computer'}
       </span>
+      {box && <ToneBadge tone={state.tone} label={state.label} />}
       {signIn && (
         <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
           <KeyRound aria-hidden /> Needs sign-in

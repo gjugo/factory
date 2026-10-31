@@ -10,7 +10,8 @@ import {
   elapsedLabel,
   gridRows,
   groupAgents,
-  machineLabel,
+  CLOUD_STATE,
+  moveBlocked,
   modelLabel,
   parseGridIds,
   parseStatusFilter,
@@ -80,8 +81,18 @@ describe('task labels', () => {
     expect(elapsedLabel(agent({ status: 'working', startedAt: t }), t + 3_725_000)).toBe('1h 02m');
     expect(elapsedLabel(agent({}), 1)).toBe('');
     expect(elapsedLabel(agent({ status: 'idle', startedAt: t, endedAt: t + 9_000 }), t + 10_000)).toBe('');
-    expect(machineLabel(agent({}))).toBe('This computer');
-    expect(machineLabel(agent({ host: 'box', cloud: 'ready' }))).toBe('Cloud · ready');
+    expect(CLOUD_STATE.ready).toEqual({ label: 'Ready', tone: 'success' });
+    expect(CLOUD_STATE['setting-up'].label).toBe('Setting up');
+    expect(CLOUD_STATE.error.tone).toBe('danger');
+  });
+
+  it('moves an agent between this computer and the cloud only while they have no task', () => {
+    expect(moveBlocked(agent({}), true)).toBeNull();
+    expect(moveBlocked(agent({ host: 'box' }), false)).toBeNull(); // back home needs no key
+    expect(moveBlocked(agent({}), false)).toMatch(/Upstash Box API key/);
+    expect(moveBlocked(agent({ task: 'issue', status: 'done' }), true)).toMatch(/on a task/);
+    expect(moveBlocked(agent({ status: 'working' }), true)).toMatch(/on a task/);
+    expect(moveBlocked(agent({ role: 'ceo' }), true)).toMatch(/CEO/);
   });
 
   it('names the coding agent, model and sign-in', () => {

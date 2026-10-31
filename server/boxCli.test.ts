@@ -38,7 +38,7 @@ describe('finishedTurn', () => {
   it('counts a turn that ended after the last prompt it was given', () => {
     expect(finishedTurn([ev('UserPromptSubmit'), ev('PreToolUse'), ev('Stop')])).toBe(true);
     expect(finishedTurn([ev('TurnComplete')])).toBe(true);
-    expect(finishedTurn([ev('CubefarmExit', { code: 1 })])).toBe(true);
+    expect(finishedTurn([ev('FactoryExit', { code: 1 })])).toBe(true);
   });
 
   it("doesn't count an earlier turn when a new one started after it", () => {
@@ -47,8 +47,8 @@ describe('finishedTurn', () => {
   });
 
   it('reads the exit code the launcher wrote', () => {
-    expect(exitCode([ev('Stop'), ev('CubefarmExit', { code: 0 })])).toBe(0);
-    expect(exitCode([ev('CubefarmExit', { code: 137 })])).toBe(137);
+    expect(exitCode([ev('Stop'), ev('FactoryExit', { code: 0 })])).toBe(0);
+    expect(exitCode([ev('FactoryExit', { code: 137 })])).toBe(137);
     expect(exitCode([ev('Stop')])).toBeNull();
   });
 });

@@ -148,7 +148,7 @@ describe('launchArgs', () => {
     const hooks = args.filter((a) => a.startsWith('hooks.'));
     expect(hooks.map((h) => h.slice(6, h.indexOf('=')))).toEqual(CODEX_HOOK_EVENTS);
     expect(hooks[0]).toContain('type="command"');
-    expect(env.CUBEFARM_HOOK_URL).toBe('http://127.0.0.1:1/api/hooks/t');
+    expect(env.FACTORY_HOOK_URL).toBe('http://127.0.0.1:1/api/hooks/t');
   });
 
   it('runs the hook program with a command that never starts with a quote on Windows', () => {
@@ -188,7 +188,7 @@ describe('localUrl', () => {
   it('takes a local server\'s address from the environment when set', () => {
     const ollama = LOCAL_PROVIDERS[0];
     expect(localUrl(ollama, {})).toBe('http://127.0.0.1:11434/v1');
-    expect(localUrl(ollama, { CUBEFARM_OLLAMA_URL: ' http://gpu-box:11434/v1 ' })).toBe('http://gpu-box:11434/v1');
+    expect(localUrl(ollama, { FACTORY_OLLAMA_URL: ' http://gpu-box:11434/v1 ' })).toBe('http://gpu-box:11434/v1');
   });
 });
 
