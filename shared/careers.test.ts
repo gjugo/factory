@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { avgFixRounds, DAY_MS, deskItems, deskToy, knownFor, mvpOfWeek, newCareer, passRate, plantGrowth, rank, type CareerView } from './careers.ts';
-import { CATALOGUE, DECOR_SLOTS, priceOf, slotKind, stored } from './progress.ts';
 
 const NOW = Date.UTC(2026, 9, 4, 12);
 const career = (c: Partial<CareerView> = {}): CareerView => ({ ...newCareer(NOW), ...c });
@@ -70,24 +69,5 @@ describe('the desk', () => {
     expect(deskToy('grace', career({ merged: 2, reviews: 1 }))).toBe('speaker');
     expect(deskToy('grace', career({ merged: 2, reviews: 3 }))).toBe('magnifier');
     expect(deskToy('grace', career({ reviews: 2 }))).toBe('speaker');
-  });
-});
-
-describe('the catalogue', () => {
-  it('prices rise a quarter per one owned, in fives', () => {
-    expect(priceOf('arcade')).toBe(200);
-    expect(priceOf('arcade', 2)).toBe(300);
-    expect(priceOf('poster-ship', 1)).toBe(30);
-  });
-
-  it('has a slot of every kind its items need', () => {
-    for (const item of CATALOGUE) expect(DECOR_SLOTS.some((s) => s.kind === item.kind)).toBe(true);
-    expect(new Set(DECOR_SLOTS.map((s) => s.id)).size).toBe(DECOR_SLOTS.length);
-    expect(slotKind('b-lounge')).toBe('big');
-  });
-
-  it('counts what is still in the decor box', () => {
-    expect(stored({ owned: { plant: 3 }, placed: { 'f-ne': 'plant', 'f-se': 'plant' } }, 'plant')).toBe(1);
-    expect(stored({ owned: {}, placed: {} }, 'plant')).toBe(0);
   });
 });

@@ -18,12 +18,9 @@ import { serviceWorkerSource, swVersion } from './pwa.ts';
 import { screenStatus } from './screenReply.ts';
 import { parseSendBackNote } from './sendBack.ts';
 import { handleGateway, upgradeGateway } from './previewGateway.ts';
-import { PresenceHub } from './presence.ts';
 import { HttpError, Swarm } from './swarm.ts';
 
 const swarm = new Swarm(DEMO ? createDemoBackend(DEMO_SCALE) : realBackend);
-// Who else is in the 3D office (shared presence): relayed between tabs over /ws, never saved. The demo adds fake visitors.
-const presence = new PresenceHub({ demo: DEMO });
 // Sessions the office picks back up while it starts need the address their CLIs call back on before it listens.
 if (PORT) setOfficeUrl(`http://${localAddress(HOST)}:${PORT}`);
 await swarm.init();
@@ -128,8 +125,6 @@ app.post(
   }),
 );
 app.delete('/api/repos/:repo/preview', route((req) => swarm.stopPreview(repoId(req))));
-// A finished ping-pong game, for the floor's leaderboard
-app.post('/api/repos/:repo/pong', route((req) => swarm.recordPong(repoId(req), req.body ?? {})));
 // The PR theatre: open PRs running beside the floor's app, and what the app viewer has on screen
 app.post('/api/repos/:repo/pr-previews/:n', route((req) => swarm.startPrPreview(repoId(req), num(req.params.n), req.body?.restart === true)));
 app.delete('/api/repos/:repo/pr-previews/:n', route((req) => swarm.stopPrPreview(repoId(req), num(req.params.n))));
@@ -304,13 +299,6 @@ app.post('/api/requests/:id/reject', route((req) => swarm.rejectRequest(String(r
 // The demo office only: the CEO grows (or shrinks) a floor's team on demand.
 app.post('/api/demo/proposals', route((req) => swarm.demoPropose(req.body?.kind, req.body?.floor)));
 
-// Office progression (#210): the lobby kiosk, a floor's decorations, the player's coffees, and the demo's coins and
-// tenure for QA.
-app.post('/api/repos/:repo/decor/buy', route((req) => swarm.buyDecoration(repoId(req), req.body?.item)));
-app.post('/api/repos/:repo/decor/place', route((req) => swarm.placeDecoration(repoId(req), req.body ?? {})));
-app.post('/api/progress/coffee', route((req) => swarm.drankCoffee(req.body?.id)));
-app.post('/api/progress/demo', route((req) => swarm.demoProgress(req.body ?? {})));
-
 // Serve the built client: the published package, or `npm start` after `npm run build`.
 const dist = path.resolve(import.meta.dirname, '../dist');
 if (fs.existsSync(dist)) {
@@ -339,10 +327,7 @@ const server = http.createServer(app);
 // Two sockets: /ws carries the office's state to every tab, /ws/term?agent=<id> one agent's terminal to whoever opened it.
 const wss = new WebSocketServer({ noServer: true });
 const terms = new WebSocketServer({ noServer: true });
-wss.on('connection', (ws) => {
-  swarm.addClient(ws);
-  presence.attach(ws);
-});
+wss.on('connection', (ws) => swarm.addClient(ws));
 terms.on('connection', (ws, req) => swarm.attachTerminal(new URL(req.url ?? '', 'http://localhost').searchParams.get('agent') ?? '', ws));
 server.on('upgrade', (req, socket, head) => {
   const { pathname } = new URL(req.url ?? '', 'http://localhost');
@@ -375,7 +360,6 @@ const shutdown = (signal: string) => {
   closing = true;
   console.log(`\n  ${signal}: stopping floor previews…`);
   const force = setTimeout(() => process.exit(0), 15_000);
-  presence.stop();
   void swarm
     .shutdown(signal === 'restart')
     .catch((err) => console.error(err))

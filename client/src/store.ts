@@ -1,13 +1,11 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { CEO_ID, DEFAULT_DOG_NAME, DEFAULT_MAX_AGENTS, type AgentView, type CeoInfo, type CliView, type CloudView, type DoctorFinding, type HireRequestView, type LogLine, type NotifyChannelsView, type OfficeUpdateView, type OpsView, type PhoneMessage, type PongRow, type PrPreviewView, type QaView, type RepoView, type ServerEvent, type SwarmSettings, type TickerItem, type UsageView, type VisitorView, type VoiceCacheView, type WorldSnapshot } from '../../shared/types';
+import { CEO_ID, DEFAULT_MAX_AGENTS, type AgentView, type CeoInfo, type CliView, type CloudView, type DoctorFinding, type HireRequestView, type LogLine, type NotifyChannelsView, type OfficeUpdateView, type OpsView, type PhoneMessage, type PrPreviewView, type QaView, type RepoView, type ServerEvent, type SwarmSettings, type TickerItem, type UsageView, type VoiceCacheView, type WorldSnapshot } from '../../shared/types';
 import { blockers } from '../../shared/issues';
 import { latestListed } from '../../shared/watch';
-import { DEFAULT_WEATHER, DEFAULT_WORLD_EVENTS, EMPTY_WEATHER_VIEW, type WeatherView } from '../../shared/outside';
 import { DEFAULT_NOTIFY } from '../../shared/notify';
 import { DEFAULT_CLOUD, EMPTY_CLOUD } from '../../shared/cloud';
 import { DEFAULT_UI } from '../../shared/ui';
-import type { ProgressView } from '../../shared/progress';
 import { showDesktopNote } from './notifications';
 import { EMPTY_OPS } from './ops';
 import { needsManager, qaCardNote, type CardTone } from './qaCard';
@@ -56,14 +54,10 @@ interface State {
   voiceKeyHint: string; // its last 4 characters
   voiceCache: VoiceCacheView;
   voiceSpeaking: number | null; // the message being read aloud in this tab (voice/speaker.ts)
-  progress: ProgressView;
-  weather: WeatherView;
   ticker: TickerItem[]; // the projects' recent activity lines, oldest first
   notifyChannels: NotifyChannelsView; // which chat apps have a webhook saved (hints only) and how many devices get push
   cloud: CloudView; // Settings → Cloud agents: the Upstash account and what cloud agents sign in with (never a key)
-  pong: Record<string, PongRow[]>;
   restarting: boolean; // the connection dropped because the office is restarting to update
-  visitors: VisitorView[];
 
   // What this tab watches (watch.ts): the route's project floor, the agents pages have open, workers lists out.
   floor: number;
@@ -118,16 +112,12 @@ export const useStore = create<State>((set, get) => ({
     ceoHeartbeatMin: 60,
     managerName: '',
     companyName: '',
-    dogName: DEFAULT_DOG_NAME,
     projectsDir: '',
     setupDone: true,
     tutorialStep: -1,
     pacingSessions: 3,
     trimIdleDesksMin: 120,
     voice: { provider: 'off', voiceId: '', voiceName: '', model: '', speakOffice: false, keepDays: 7 },
-    themes: { mode: 'auto', disabled: [], birthday: null },
-    weather: DEFAULT_WEATHER,
-    worldEvents: DEFAULT_WORLD_EVENTS,
     listen: { provider: 'off', autoSend: false, handsFree: false },
     notify: DEFAULT_NOTIFY,
     cloud: DEFAULT_CLOUD,
@@ -152,14 +142,10 @@ export const useStore = create<State>((set, get) => ({
   voiceKeyHint: '',
   voiceCache: { clips: 0, bytes: 0, saved: [] },
   voiceSpeaking: null,
-  progress: { floors: {}, achievements: [], coffees: 0, merges: 0 },
-  weather: EMPTY_WEATHER_VIEW,
   ticker: [],
   notifyChannels: { webhooks: { ntfy: { set: false, hint: '' } }, pushDevices: 0 },
   cloud: EMPTY_CLOUD,
-  pong: {},
   restarting: false,
-  visitors: [],
 
   floor: -1,
   watched: {},
@@ -215,12 +201,9 @@ export const useStore = create<State>((set, get) => ({
           voiceKeySet: d.voiceKeySet ?? false,
           voiceKeyHint: d.voiceKeyHint ?? '',
           voiceCache: d.voiceCache ?? { clips: 0, bytes: 0, saved: [] },
-          weather: d.weather ?? EMPTY_WEATHER_VIEW,
           ticker: d.ticker ?? [],
           notifyChannels: d.notifyChannels ?? get().notifyChannels,
           cloud: d.cloud ?? EMPTY_CLOUD,
-          progress: d.progress ?? { floors: {}, achievements: [], coffees: 0, merges: 0 },
-          pong: d.pong ?? {},
           restarting: false,
         });
         break;
@@ -361,9 +344,6 @@ export const useStore = create<State>((set, get) => ({
       case 'voiceCache':
         set({ voiceCache: ev.voiceCache });
         break;
-      case 'weather':
-        set({ weather: ev.weather });
-        break;
       case 'ticker':
         set({ ticker: [...get().ticker.slice(-(TICKER_KEEP - 1)), ev.item] });
         break;
@@ -376,21 +356,6 @@ export const useStore = create<State>((set, get) => ({
       case 'notify':
         // This tab shows it only while it's hidden (notifications.ts); a visible dashboard toasts already.
         showDesktopNote(ev.note, get().settings.notify?.channels.desktop !== false);
-        break;
-      case 'visitors':
-        set({ visitors: ev.visitors });
-        break;
-      case 'progress':
-        set({ progress: ev.progress });
-        break;
-      case 'pong':
-        set({ pong: { ...get().pong, [ev.repoId]: ev.board } });
-        break;
-      // The 3D office's live presence and rewards: nothing to show here.
-      case 'visitorPose':
-      case 'visitorEmote':
-      case 'visitorPing':
-      case 'reward':
         break;
     }
   },

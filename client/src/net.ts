@@ -18,7 +18,7 @@ let watching = false;
 // Back from the time-lapse: everything waits for the fresh snapshot asked for, so nothing applies on top of the replay.
 let awaitingSnapshot = false;
 // What isn't part of the replayed office (the office's settings, its update, where notifications go…) stays live.
-const OUTSIDE_REPLAY = new Set<ServerEvent['type']>(['notify', 'notifyChannels', 'settings', 'officeUpdate', 'clis', 'voiceKey', 'voiceCache', 'cloud', 'doctor', 'progress', 'visitors', 'visitorPose', 'visitorEmote', 'visitorPing']);
+const OUTSIDE_REPLAY = new Set<ServerEvent['type']>(['notify', 'notifyChannels', 'settings', 'officeUpdate', 'clis', 'voiceKey', 'voiceCache', 'cloud', 'doctor']);
 
 /** Sends a message on /ws; false while disconnected, when it's dropped. */
 export function sendWs(msg: ClientEvent) {
