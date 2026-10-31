@@ -135,7 +135,7 @@ export function prepareDeskScript(fullName: string, base: DeskBase, branch: stri
   ].join('\n');
 }
 
-/** Read-only, shallow copies of a floor's linked repos, fetched again for each task. Never fails the task. */
+/** Read-only, shallow copies of a project's linked repos, fetched again for each task. Never fails the task. */
 export function linkedReposScript(fullNames: string[]): string {
   const lines = ['set +e'];
   for (const fullName of fullNames) {

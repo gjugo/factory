@@ -1,9 +1,9 @@
-// The demo's sample day (docs/how-it-works.md, "Time-lapse"): a made-up working day on the demo's own floors and
+// The demo's sample day (docs/how-it-works.md, "Time-lapse"): a made-up working day on the demo's own projects and
 // people, 08:30 to 18:00, journaled like a real one so a fresh demo office has a day to replay: issues picked up, PRs
 // opened, QA rounds (some failed and fixed, one needing the manager), merges, the CEO filing issues and a spell of
 // pacing, with mission control's numbers along. Seeded, so the same office gives the same day.
 import { compress, FRAME_MESSAGES, KEYFRAME_MS, type JournalAgent, type JournalEvent, type JournalFrame, type JournalLine } from '../shared/journal.ts';
-import { emptyHistory, opsView, type OpsFloorState } from './metrics.ts';
+import { emptyHistory, opsView, type OpsProjectState } from './metrics.ts';
 import { CEO_ID, INSTALL_STEP, type ActivityKind, type AgentActivity, type CeoInfo, type IssueInfo, type PhoneMessage, type PullInfo, type QaView, type RepoView, type TickerItem, type UsageView } from '../shared/types.ts';
 
 /** A small seeded random number generator (mulberry32), in [0, 1). */
@@ -70,7 +70,7 @@ function activityOf(a: JournalAgent): AgentActivity | null {
 }
 
 /**
- * The day starting at local midnight `midnight`, on `base`'s floors and people: a list of journal lines (keyframes
+ * The day starting at local midnight `midnight`, on `base`'s projects and people: a list of journal lines (keyframes
  * every 10 minutes, the first a boot one) as the journal writes them, ready for Journal.writeDay.
  */
 export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)): JournalLine[] {
@@ -139,17 +139,17 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
 
   /** Mission control as the office would show it now (server/swarm.ts opsNow). */
   function opsNow() {
-    const floors: OpsFloorState[] = repos.map((r) => {
+    const projects: OpsProjectState[] = repos.map((r) => {
       const taken = claimed(r);
       return {
         repoId: r.id,
-        floor: r.floor,
+        number: r.number,
         ready: r.issues.filter((i) => !taken.has(i.number)).length,
         agents: agents.filter((a) => a.repoId === r.id),
         prs: r.pulls.filter((p) => p.state === 'OPEN').map((p) => ({ number: p.number, qa: qa.get(qaKey(r.id, p.number)) ?? null, why: null })),
       };
     });
-    return opsView(floors, history, t);
+    return opsView(projects, history, t);
   }
 
   function start(a: JournalAgent, job: Job, patch: Partial<JournalAgent>) {
@@ -332,7 +332,7 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
     }
 
     // free people pick up work: their own PR's fixes first, then testing someone else's PR (their own only when they're
-    // the floor's one agent), then new issues (not all at once, and slower while pacing)
+    // the project's one agent), then new issues (not all at once, and slower while pacing)
     for (const a of agents) {
       if (a.role === 'ceo' || jobs.has(a.id) || (restUntil.get(a.id) ?? 0) > t) continue;
       const repo = repos.find((r) => r.id === a.repoId);

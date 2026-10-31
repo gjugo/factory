@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { OpsAlarm, OpsFloor, TickerItem } from '../../../../shared/types';
+import type { OpsAlarm, OpsProject, TickerItem } from '../../../../shared/types';
 import { EMPTY_NUMBERS } from '../../ops';
-import { alarmLink, feedItems, nextSort, pipelineSegments, pipelineText, sortFloors, sparkPoints, sparkSummary, type FloorRow } from './overview';
+import { alarmLink, feedItems, nextSort, pipelineSegments, pipelineText, sortProjects, sparkPoints, sparkSummary, type ProjectRow } from './overview';
 
-const floor = (n: number, patch: Partial<OpsFloor> = {}): OpsFloor => ({ ...EMPTY_NUMBERS, repoId: `o/r${n}`, floor: n, alarms: 0, ...patch });
-const row = (name: string, f: OpsFloor): FloorRow => ({ name, floor: f });
+const project = (n: number, patch: Partial<OpsProject> = {}): OpsProject => ({ ...EMPTY_NUMBERS, repoId: `o/r${n}`, number: n, alarms: 0, ...patch });
+const row = (name: string, f: OpsProject): ProjectRow => ({ name, project: f });
 
 describe('pipeline segments', () => {
   it('lays the non-empty stages end to end in pipeline order', () => {
@@ -27,23 +27,23 @@ describe('pipeline segments', () => {
 });
 
 describe('sorting the projects table', () => {
-  const a = row('alpha', floor(1, { mergedToday: 3, leadMs: 5000, alarms: 1 }));
-  const b = row('beta', floor(2, { mergedToday: 7, leadMs: null, ready: 4 }));
-  const c = row('gamma', floor(3, { mergedToday: 3, leadMs: 1000 }));
+  const a = row('alpha', project(1, { mergedToday: 3, leadMs: 5000, alarms: 1 }));
+  const b = row('beta', project(2, { mergedToday: 7, leadMs: null, ready: 4 }));
+  const c = row('gamma', project(3, { mergedToday: 3, leadMs: 1000 }));
 
   it('by name, A→Z or Z→A', () => {
-    expect(sortFloors([c, a, b], { key: 'name', desc: false }).map((r) => r.name)).toEqual(['alpha', 'beta', 'gamma']);
-    expect(sortFloors([c, a, b], { key: 'name', desc: true }).map((r) => r.name)).toEqual(['gamma', 'beta', 'alpha']);
+    expect(sortProjects([c, a, b], { key: 'name', desc: false }).map((r) => r.name)).toEqual(['alpha', 'beta', 'gamma']);
+    expect(sortProjects([c, a, b], { key: 'name', desc: true }).map((r) => r.name)).toEqual(['gamma', 'beta', 'alpha']);
   });
 
-  it('by a number, ties by floor', () => {
-    expect(sortFloors([c, a, b], { key: 'mergedToday', desc: true }).map((r) => r.name)).toEqual(['beta', 'alpha', 'gamma']);
-    expect(sortFloors([c, a, b], { key: 'pipeline', desc: true }).map((r) => r.name)).toEqual(['beta', 'alpha', 'gamma']);
+  it('by a number, ties by project', () => {
+    expect(sortProjects([c, a, b], { key: 'mergedToday', desc: true }).map((r) => r.name)).toEqual(['beta', 'alpha', 'gamma']);
+    expect(sortProjects([c, a, b], { key: 'pipeline', desc: true }).map((r) => r.name)).toEqual(['beta', 'alpha', 'gamma']);
   });
 
   it('puts missing numbers last in both directions', () => {
-    expect(sortFloors([b, a, c], { key: 'lead', desc: false }).map((r) => r.name)).toEqual(['gamma', 'alpha', 'beta']);
-    expect(sortFloors([b, a, c], { key: 'lead', desc: true }).map((r) => r.name)).toEqual(['alpha', 'gamma', 'beta']);
+    expect(sortProjects([b, a, c], { key: 'lead', desc: false }).map((r) => r.name)).toEqual(['gamma', 'alpha', 'beta']);
+    expect(sortProjects([b, a, c], { key: 'lead', desc: true }).map((r) => r.name)).toEqual(['alpha', 'gamma', 'beta']);
   });
 
   it('flips the same column, starts a new one sensibly', () => {
@@ -89,7 +89,7 @@ describe('the activity feed', () => {
 });
 
 describe('alarm links', () => {
-  const alarm = (patch: Partial<OpsAlarm>): OpsAlarm => ({ id: 'x', kind: 'pr', repoId: 'demo-co/pixel-todo', floor: 1, prNumber: null, agentId: null, text: '', since: 0, ...patch });
+  const alarm = (patch: Partial<OpsAlarm>): OpsAlarm => ({ id: 'x', kind: 'pr', repoId: 'demo-co/pixel-todo', project: 1, prNumber: null, agentId: null, text: '', since: 0, ...patch });
 
   it('opens a PR alarm at its board card, an agent alarm at the agent', () => {
     expect(alarmLink(alarm({ prNumber: 34 }))).toBe('/projects/demo-co/pixel-todo?card=pr-34');

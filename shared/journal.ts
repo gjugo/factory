@@ -27,7 +27,7 @@ export interface JournalFrame {
   usage: UsageView;
   /** Mission control's screens (absent in the demo's sample day). */
   ops?: OpsView;
-  /** The floors' latest ticker lines (absent in journals from before the ticker). */
+  /** The projects' latest ticker lines (absent in journals from before the ticker). */
   ticker?: TickerItem[];
 }
 
@@ -42,7 +42,7 @@ export interface AgentPatch {
 }
 
 /**
- * A floor's update after its first: the top-level fields that changed, and the issues and PRs that changed when the
+ * A project's update after its first: the top-level fields that changed, and the issues and PRs that changed when the
  * lists kept their order (a list that gained, lost or reordered entries is in `set` whole).
  */
 export interface RepoPatch {
@@ -53,7 +53,7 @@ export interface RepoPatch {
   pulls?: PullInfo[];
 }
 
-/** What an event line holds: an event as journalEvent slims it, or an agent's or a floor's changes. */
+/** What an event line holds: an event as journalEvent slims it, or an agent's or a project's changes. */
 export type RecordedEvent = JournalEvent | AgentPatch | RepoPatch;
 
 /** One line of a journal file: a keyframe (`boot` on the first one after the office started) or an event. */
@@ -181,7 +181,7 @@ const compactPreview = (p: PreviewView): PreviewView => ({
   logTail: [],
 });
 
-/** A floor as the journal keeps it: no preview env or logs, no briefs, no paths, issue bodies cut to their dependencies. */
+/** A project as the journal keeps it: no preview env or logs, no briefs, no paths, issue bodies cut to their dependencies. */
 export function compactRepo(r: RepoView, secrets: readonly string[] = []): RepoView {
   return {
     id: r.id,
@@ -189,7 +189,7 @@ export function compactRepo(r: RepoView, secrets: readonly string[] = []): RepoV
     description: text(r.description, 140, secrets),
     url: r.url,
     defaultBranch: r.defaultBranch,
-    floor: r.floor,
+    number: r.number,
     color: r.color,
     autoAssign: r.autoAssign,
     autoMerge: r.autoMerge,
@@ -324,7 +324,7 @@ function compactOps(o: OpsView, secrets: readonly string[]): OpsView {
   return { ...o, alarms: o.alarms.slice(0, 50).map((a) => ({ ...a, text: a.kind === 'agent' ? clip(a.text.split(':')[0], 80) : text(a.text, 160, secrets) })) };
 }
 
-/** A floor ticker line, without QA's screenshots. */
+/** A project ticker line, without QA's screenshots. */
 const compactTicker = (t: TickerItem, secrets: readonly string[]): TickerItem => ({ id: t.id, repoId: t.repoId, at: t.at, text: text(t.text, 140, secrets), tone: t.tone });
 
 /** The ticker lines a keyframe keeps. */
@@ -446,7 +446,7 @@ function listChange<T extends { number: number }>(was: T[], now: T[]): { whole?:
   return changed.length ? { changed } : {};
 }
 
-/** A floor's update as a patch on how it was. */
+/** A project's update as a patch on how it was. */
 export function repoPatch(was: RepoView, now: RepoView): RepoPatch {
   const out: RepoPatch = { type: 'repoPatch', id: now.id, set: changedFields(was, now, ['issues', 'pulls']) };
   const issues = listChange(was.issues, now.issues);
@@ -458,7 +458,7 @@ export function repoPatch(was: RepoView, now: RepoView): RepoPatch {
   return out;
 }
 
-/** The floor after a patch. */
+/** The project after a patch. */
 export function applyRepoPatch(prev: RepoView, p: RepoPatch): RepoView {
   const next = { ...prev, ...p.set };
   const swap = <T extends { number: number }>(list: T[], changed?: T[]) => (changed ? list.map((x) => changed.find((c) => c.number === x.number) ?? x) : list);
@@ -467,7 +467,7 @@ export function applyRepoPatch(prev: RepoView, p: RepoPatch): RepoView {
 
 /**
  * What to write for `e`, given what was last recorded (`last`, updated in place): nothing for an update identical to
- * the last one or the removal of something the journal never had, a patch for a known agent or floor, else `e`.
+ * the last one or the removal of something the journal never had, a patch for a known agent or project, else `e`.
  */
 export function recorded(last: Map<string, string>, e: JournalEvent): RecordedEvent | null {
   const key = dedupeKey(e);
@@ -492,7 +492,7 @@ function remember(last: Map<string, string>, e: AgentPatch | RepoPatch) {
   else last.set(key, JSON.stringify({ type: 'repo', repo: applyRepoPatch((JSON.parse(prev) as { repo: RepoView }).repo, e) }));
 }
 
-/** Lines as the journal writes them: unchanged repeats dropped, agents' and floors' updates cut to their changes. */
+/** Lines as the journal writes them: unchanged repeats dropped, agents' and projects' updates cut to their changes. */
 export function compress(lines: readonly JournalLine[]): JournalLine[] {
   let last = new Map<string, string>();
   const out: JournalLine[] = [];
@@ -542,6 +542,43 @@ export function legacyRequest<T extends object = HireRequestView>(r: T | Record<
   return { ...rest, cli: typeof rest.cli === 'string' ? rest.cli : '' } as T;
 }
 
+/**
+ * A project as state files and journals from before floors were called projects (#26) hold it: its `floor` is its
+ * `number` now. Anything else is left as it is.
+ */
+export function legacyRepo<T extends object>(r: T): T {
+  if (!r || typeof r !== 'object' || !('floor' in r)) return r;
+  const { floor, ...rest } = r as Record<string, unknown>;
+  return ('number' in rest ? rest : { ...rest, number: floor }) as T;
+}
+
+/** Mission control as journals from before #26 recorded it: `floors` (each with its `floor`) and the alarms' `floor`. */
+export function legacyOps(o: OpsView): OpsView {
+  const old = o as OpsView & { floors?: Record<string, unknown>[] };
+  if (!old.floors && !o.alarms?.some((a) => 'floor' in a)) return o;
+  const { floors, ...rest } = old;
+  const projects = (o.projects ?? floors ?? []).map((p) => legacyRepo(p as object) as OpsView['projects'][number]);
+  const alarms = (o.alarms ?? []).map((a) => {
+    if (!('floor' in a)) return a;
+    const { floor, ...r } = a as typeof a & { floor: number };
+    return { ...r, project: floor };
+  });
+  return { ...rest, projects, alarms };
+}
+
+/** A journal line from before #26 in today's shape: projects' numbers and mission control's names. */
+export function legacyLine(l: JournalLine): JournalLine {
+  if (isFrame(l)) {
+    const k = l.k;
+    return { ...l, k: { ...k, repos: (k.repos ?? []).map(legacyRepo), ...(k.ops ? { ops: legacyOps(k.ops) } : {}) } };
+  }
+  const e = l.e;
+  if (e.type === 'repo') return { ...l, e: { ...e, repo: legacyRepo(e.repo) } };
+  if (e.type === 'repoPatch') return { ...l, e: { ...e, set: legacyRepo(e.set) } };
+  if (e.type === 'ops') return { ...l, e: { ...e, ops: legacyOps(e.ops) } };
+  return l;
+}
+
 /** Settings the 3D office had and factory dropped (#24): the dog, holiday themes, weather and world events. */
 export const REMOVED_SETTINGS = ['dogName', 'themes', 'weather', 'worldEvents'] as const;
 
@@ -562,7 +599,7 @@ export function parseLines(raw: string): JournalLine[] {
     if (!line.trim()) continue;
     try {
       const l = JSON.parse(line) as JournalLine;
-      if (l && typeof l.t === 'number' && ('k' in l || 'e' in l)) out.push(l);
+      if (l && typeof l.t === 'number' && ('k' in l || 'e' in l)) out.push(legacyLine(l));
     } catch {
       // torn or damaged: the rest of the file still reads
     }
@@ -616,7 +653,7 @@ export function marksOf(lines: readonly JournalLine[]): JournalMark[] {
   const update = (t: number, next: RepoView) => {
     const before = repos.get(next.id);
     repos.set(next.id, next);
-    if (!before) return; // a new floor: its backlog isn't news
+    if (!before) return; // a new project: its backlog isn't news
     const was = new Map(before.pulls.map((p) => [p.number, p.state]));
     for (const p of next.pulls) if (p.state === 'MERGED' && was.get(p.number) === 'OPEN') marks.push({ t, kind: 'merge', repoId: next.id, n: p.number, label: `#${p.number} ${p.title}` });
     const known = new Set(before.issues.map((i) => i.number));

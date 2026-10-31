@@ -1,7 +1,7 @@
 // The PR theatre's decisions, kept pure for tests: which slot, worktree and port a PR preview gets, which one makes
 // room for a new one, and when one stops on its own (nobody watching, or its PR is no longer open).
 
-/** PR previews at once, besides each floor's main preview. */
+/** PR previews at once, besides each project's main preview. */
 export const MAX_PR_PREVIEWS = 2;
 /** How often an open viewer says what it has on screen. */
 export const WATCH_EVERY_MS = 30_000;
@@ -14,8 +14,8 @@ export const prBranch = (slot: number) => `swarm-preview-pr-${slot}`;
 export const prKey = (repoId: string, pr: number) => `${repoId}#${pr}`;
 
 /**
- * The ports a slot's preview may use, in order: one lane per slot in the hundred above the floor previews' base
- * (6401, 6403 … for slot 1 and 6402, 6404 … for slot 2 by default), never the floor previews' own hundred.
+ * The ports a slot's preview may use, in order: one lane per slot in the hundred above the project previews' base
+ * (6401, 6403 … for slot 1 and 6402, 6404 … for slot 2 by default), never the project previews' own hundred.
  */
 export function prPortCandidates(base: number, slot: number, slots = MAX_PR_PREVIEWS): number[] {
   const out: number[] = [];
@@ -63,7 +63,7 @@ export function expired(runs: PrRunInfo[], screen: Set<string>, now: number, idl
 }
 
 /**
- * The floor's PR previews whose PR merged or closed. A PR missing from the list counts as closed too (closed PRs
+ * The project's PR previews whose PR merged or closed. A PR missing from the list counts as closed too (closed PRs
  * drop out of it), unless the open list was cut off at its limit.
  */
 export function closedPrs(runs: PrRunInfo[], repoId: string, pulls: { number: number; state: string }[], openLimit = 50): string[] {

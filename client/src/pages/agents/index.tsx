@@ -133,7 +133,7 @@ function AgentSections({ cards, project, status: statusParam, onFilter }: { card
 
       {groups.projects.map(({ repo, agents: list }) => {
         const size = teamSize(repo.id);
-        const headingId = `agents-${repo.floor}`;
+        const headingId = `agents-${repo.number}`;
         return (
           <section key={repo.id} aria-labelledby={headingId} className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

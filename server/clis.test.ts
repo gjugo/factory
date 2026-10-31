@@ -237,11 +237,11 @@ describe("Codex's file edits in the log", () => {
 
 describe("the CEO's office tools in the log", () => {
   it('says what each one asks for', () => {
-    expect(describeOfficeTool('scale_team', { floor: 2, size: 5, reason: 'Six issues ready, two agents free' })).toBe('📈 scale_team floor 2 → 5: Six issues ready, two agents free');
+    expect(describeOfficeTool('scale_team', { project: 2, size: 5, reason: 'Six issues ready, two agents free' })).toBe('📈 scale_team project 2 → 5: Six issues ready, two agents free');
     expect(describeOfficeTool('configure_agent', { agent_id: 'ada', cli: 'codex', model: '' })).toBe('⚙️ configure_agent ada: codex');
-    expect(describeOfficeTool('set_dependencies', { floor: 1, number: 7, depends_on: [3, 4] })).toBe('🔗 set_dependencies #7 → floor 1 · depends on #3, #4');
-    expect(describeOfficeTool('set_dependencies', { floor: 1, number: 7, depends_on: [] })).toBe('🔗 set_dependencies #7 → floor 1 · depends on nothing');
-    expect(describeOfficeTool('file_issue', { floor: 1, title: 'Dark mode', body: 'x' })).toBe('📝 file_issue "Dark mode" → floor 1');
+    expect(describeOfficeTool('set_dependencies', { project: 1, number: 7, depends_on: [3, 4] })).toBe('🔗 set_dependencies #7 → project 1 · depends on #3, #4');
+    expect(describeOfficeTool('set_dependencies', { project: 1, number: 7, depends_on: [] })).toBe('🔗 set_dependencies #7 → project 1 · depends on nothing');
+    expect(describeOfficeTool('file_issue', { project: 1, title: 'Dark mode', body: 'x' })).toBe('📝 file_issue "Dark mode" → project 1');
   });
 });
 

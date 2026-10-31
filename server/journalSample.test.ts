@@ -39,13 +39,13 @@ const person = (id: string, role: JournalAgent['role'], repoId: string, desk: nu
   lastError: null,
 });
 
-const floor = (id: string, n: number, issues: number): RepoView => ({
+const project = (id: string, n: number, issues: number): RepoView => ({
   id,
   fullName: id,
   description: '',
   url: `https://github.com/${id}`,
   defaultBranch: 'main',
-  floor: n,
+  number: n,
   color: '#ff0000',
   autoAssign: true,
   autoMerge: true,
@@ -67,7 +67,7 @@ const floor = (id: string, n: number, issues: number): RepoView => ({
 });
 
 const base: JournalFrame = {
-  repos: [floor('demo-co/pixel-todo', 1, 6), floor('demo-co/weather-api', 2, 3)],
+  repos: [project('demo-co/pixel-todo', 1, 6), project('demo-co/weather-api', 2, 3)],
   agents: [
     person(CEO_ID, 'ceo', '', 0),
     ...['ada', 'grace', 'linus', 'alan', 'barbara', 'marple'].map((id, i) => person(id, 'agent', 'demo-co/pixel-todo', i)),
@@ -107,7 +107,7 @@ describe('sampleDay', () => {
     expect(lines.some((l) => !isFrame(l) && l.e.type === 'agentPatch')).toBe(true);
   });
 
-  it('keeps the floors and people it was given', () => {
+  it('keeps the projects and people it was given', () => {
     const last = lines.filter(isFrame).at(-1)!.k;
     expect(last.repos.map((r) => r.id)).toEqual(base.repos.map((r) => r.id));
     expect(last.agents.map((a) => a.id)).toEqual(base.agents.map((a) => a.id));
@@ -128,7 +128,7 @@ describe('sampleDay', () => {
 
   it("moves mission control's numbers through the day: in every keyframe, and as events when they change", () => {
     const frames = lines.filter(isFrame);
-    expect(frames.every((f) => f.k.ops?.floors.length === base.repos.length)).toBe(true);
+    expect(frames.every((f) => f.k.ops?.projects.length === base.repos.length)).toBe(true);
     const ops = lines.flatMap((l) => (!isFrame(l) && l.e.type === 'ops' ? [l.e.ops] : []));
     expect(ops.length).toBeGreaterThan(10);
     expect(new Set(ops.map((o) => o.total.building)).size).toBeGreaterThan(1);

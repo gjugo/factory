@@ -6,7 +6,7 @@ import type { Backend } from './backend.ts';
 import type { PreviewBackend } from './previewRunner.ts';
 import { describeOfficeTool, type LogEntry, type SessionCallbacks, type SessionHandle, type SessionOptions } from './agentRunner.ts';
 import { CLIS } from './clis.ts';
-import { FLOOR_SEATS, type GhRepoSummary, type IssueInfo, type PullInfo } from '../shared/types.ts';
+import { PROJECT_SEATS, type GhRepoSummary, type IssueInfo, type PullInfo } from '../shared/types.ts';
 import type { LocalFolder } from './workspace.ts';
 import { HOME_DIR, type DemoScale } from './config.ts';
 import { DAY_MS, emptyHistory, HOUR_MS, prune, startOfDay, type OpsHistory } from './metrics.ts';
@@ -118,7 +118,7 @@ seed('demo-co/weather-api', 'Tiny weather REST API', [
   ['OpenAPI spec', 'Publish an OpenAPI 3.1 document at /openapi.json.'],
 ]);
 
-// ---------- the big company (--floors / --agents, #228) ----------
+// ---------- the big company (--projects / --agents, #228) ----------
 
 const PRODUCTS: [string, string][] = [
   ['pixel-todo', 'A cheerful todo app'],
@@ -151,17 +151,17 @@ const FEATURES = [
   'Clearer error messages',
 ];
 
-/** The big company's floors: `floors` products, each with a long backlog (topped up as it shrinks, see listIssues). */
-function seedBigCompany(floors: number) {
+/** The big company's projects: `projects` products, each with a long backlog (topped up as it shrinks, see listIssues). */
+function seedBigCompany(projects: number) {
   repos.clear();
-  for (let f = 0; f < floors; f++) {
+  for (let f = 0; f < projects; f++) {
     const [name, description] = PRODUCTS[f] ?? [`project-${f + 1}`, `Project number ${f + 1}`];
     seed(`demo-co/${name}`, description, []);
     topUp(repos.get(`demo-co/${name}`)!, 30);
   }
 }
 
-/** Files new issues until the repo has `open` of them, so a big floor's agents always have something to pick up. */
+/** Files new issues until the repo has `open` of them, so a big project's agents always have something to pick up. */
 function topUp(r: FakeRepo, open: number) {
   while (r.issues.length < open) {
     const n = r.nextNumber++;
@@ -171,10 +171,10 @@ function topUp(r: FakeRepo, open: number) {
   }
 }
 
-/** How many agents each demo floor starts with: six on floor 1 and four on the others, or a big company's `agents`. */
-export function demoTeam(scale: DemoScale | null, floor: number): number {
-  if (!scale) return floor === 1 ? 6 : 4;
-  return Math.max(1, Math.min(FLOOR_SEATS, scale.agents));
+/** How many agents each demo project starts with: six on project 1 and four on the others, or a big company's `agents`. */
+export function demoTeam(scale: DemoScale | null, project: number): number {
+  if (!scale) return project === 1 ? 6 : 4;
+  return Math.max(1, Math.min(PROJECT_SEATS, scale.agents));
 }
 
 function screenshotSvg(title: string, url: string, hue: number) {
@@ -555,15 +555,15 @@ export function demoUsage(kind: 'warning' | 'limit', now: number): UsageWarning 
 }
 
 /**
- * A believable past week for mission control: each floor merged a few PRs every working day (the first floor more),
+ * A believable past week for mission control: each project merged a few PRs every working day (the first project more),
  * most QA rounds and check runs passed, and sessions cost around a dollar. `rand` is there for the tests.
  */
 export function demoPastWeek(repos: string[], now: number, rand: () => number = Math.random): OpsHistory {
   const h = emptyHistory();
   const min = 60_000;
   let n = 0;
-  repos.forEach((repo, floor) => {
-    const pace = floor === 0 ? 1 : 0.6;
+  repos.forEach((repo, project) => {
+    const pace = project === 0 ? 1 : 0.6;
     for (let day = 6; day >= 0; day--) {
       const midnight = startOfDay(now) - day * DAY_MS;
       const merges = Math.round((3 + rand() * 4) * pace);
@@ -609,9 +609,9 @@ async function fakeTrim(stillIdle: () => boolean) {
   return { freed: Math.round((300 + Math.random() * 600) * 2 ** 20), removed: ['node_modules', 'dist'], skipped: [] };
 }
 
-/** The demo's fake world; `scale` (--floors / --agents) makes it the big company instead of the usual two floors. */
+/** The demo's fake world; `scale` (--projects / --agents) makes it the big company instead of the usual two projects. */
 export function createDemoBackend(scale: DemoScale | null = null): Backend {
-  if (scale) seedBigCompany(scale.floors);
+  if (scale) seedBigCompany(scale.projects);
   restoreNumbers();
   // Tie each fake session back to its repo via the desk directory name.
   const deskRepo = new Map<string, string>();
@@ -851,7 +851,7 @@ export function createDemoBackend(scale: DemoScale | null = null): Backend {
     notify: demoNotify,
     cloud: demoCloud(),
     seedOps: (ids, at) => demoPastWeek(ids, at),
-    demoTeam: (floor) => demoTeam(scale, floor),
+    demoTeam: (project) => demoTeam(scale, project),
     simulateUsage: demoUsage,
     demoDoctor: {
       dropDesk: (dir) => {
@@ -907,7 +907,7 @@ export function createDemoBackend(scale: DemoScale | null = null): Backend {
 // ---------- the office's own update ----------
 
 /**
- * Floor 1's folder plays the office's own folder, so merges there make an update ready. There is a launcher when
+ * Project 1's folder plays the office's own folder, so merges there make an update ready. There is a launcher when
  * the real one started the demo, or with SWARM_DEMO_LAUNCHER=1; either way the update is faked: a short pause, then
  * the result message, and nothing restarts.
  */
@@ -933,7 +933,7 @@ const demoOffice: OfficeHost = {
 // ---------- the demo preview ----------
 
 /**
- * The demo's stand-in for a floor's app: a page per path (Home and About link to each other), long enough to scroll.
+ * The demo's stand-in for a project's app: a page per path (Home and About link to each other), long enough to scroll.
  * A PR's build says so and shows its change, so main and the PR look different side by side.
  */
 function placeholderPage(title: string, hue: number, at: string, pr: { number: number; title: string } | null) {
@@ -981,8 +981,8 @@ ${pr ? `<div class="pr">🧪 This is PR #${pr.number}'s build: ${safe(pr.title)}
 const DEMO_PROGRAMS = ['npm', 'npx', 'node', 'pnpm', 'yarn', 'bun', 'deno', 'vite', 'next', 'python', 'python3', 'py', 'php', 'ruby', 'go', 'cargo', 'dotnet'];
 
 /**
- * No git, no npm: short fake delays through the real statuses, then a placeholder page on the floor's port.
- * Floors made in the demo have nothing to run until they get a command, and a command whose program isn't in
+ * No git, no npm: short fake delays through the real statuses, then a placeholder page on the project's port.
+ * Projects made in the demo have nothing to run until they get a command, and a command whose program isn't in
  * DEMO_PROGRAMS fails, so the viewer's unconfigured and error states can be tried out.
  */
 const demoPreviews: PreviewBackend = {
@@ -1007,7 +1007,7 @@ const demoPreviews: PreviewBackend = {
       cb.log([`HEAD is now at ${sha} (${job.pr ? `PR #${job.pr}` : job.defaultBranch})`]);
       if (!job.command && bareRepos.has(job.fullName)) {
         stopped = true;
-        cb.failed('Nothing to run: this floor has no preview command and no package.json.', true);
+        cb.failed('Nothing to run: this project has no preview command and no package.json.', true);
         return;
       }
       cb.status('installing');
@@ -1082,9 +1082,9 @@ const GENERIC: Profile = {
   qa: '- The app builds and starts\n- The changed feature works end to end in the browser\n- Phone width: nothing overflows\n- No console errors',
 };
 
-/** A floor in company_status, as far as the demo CEO reads it. */
-export interface DemoFloor {
-  floor: number;
+/** A project in company_status, as far as the demo CEO reads it. */
+export interface DemoProject {
+  project: number;
   repo: string;
   brief: string | null;
   team: { size: number; max: number; free: number; pendingHires: number; pendingLetGos: number };
@@ -1095,40 +1095,40 @@ export interface DemoFloor {
 
 interface DemoStatus {
   company: { scaling: string }; // how team changes go, in words ("team changes apply straight away")
-  floors: DemoFloor[];
+  projects: DemoProject[];
   pendingChanges: unknown[];
 }
 
-/** The team a floor will have once the changes waiting for the manager are decided. */
-const plannedSize = (t: DemoFloor['team']) => t.size + t.pendingHires - t.pendingLetGos;
+/** The team a project will have once the changes waiting for the manager are decided. */
+const plannedSize = (t: DemoProject['team']) => t.size + t.pendingHires - t.pendingLetGos;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** The demo CEO grows a floor up to this many agents on its own (the real CEO's "rarely more than 4 to 6"). */
+/** The demo CEO grows a project up to this many agents on its own (the real CEO's "rarely more than 4 to 6"). */
 const DEMO_GROW_TO = 6;
 
 /**
- * The demo CEO's call to grow a floor: when the issues ready to start (`ready`) outnumber its free agents and the
- * agents already on their way, up to DEMO_GROW_TO and the floor's max. Null: the team can keep up.
+ * The demo CEO's call to grow a project: when the issues ready to start (`ready`) outnumber its free agents and the
+ * agents already on their way, up to DEMO_GROW_TO and the project's max. Null: the team can keep up.
  */
-export function demoGrow(f: DemoFloor, ready: number): { size: number; reason: string } | null {
+export function demoGrow(f: DemoProject, ready: number): { size: number; reason: string } | null {
   const now = plannedSize(f.team);
   const waiting = ready - f.team.free - f.team.pendingHires;
   const size = Math.min(f.team.max, Math.max(now, DEMO_GROW_TO), now + waiting);
   if (waiting <= 0 || size <= now) return null;
   return {
     size,
-    reason: `${plural(ready, 'issue')} ${ready === 1 ? 'is' : 'are'} ready to start on floor ${f.floor} and ${plural(f.team.free, 'agent')} ${f.team.free === 1 ? 'is' : 'are'} free: with ${size} agents they're worked on side by side instead of waiting.`,
+    reason: `${plural(ready, 'issue')} ${ready === 1 ? 'is' : 'are'} ready to start on project ${f.project} and ${plural(f.team.free, 'agent')} ${f.team.free === 1 ? 'is' : 'are'} free: with ${size} agents they're worked on side by side instead of waiting.`,
   };
 }
 
-/** The demo CEO's call to shrink a floor: several agents idle with nothing ready to start or test. Never below one. */
-export function demoShrink(f: DemoFloor): { size: number; reason: string } | null {
+/** The demo CEO's call to shrink a project: several agents idle with nothing ready to start or test. Never below one. */
+export function demoShrink(f: DemoProject): { size: number; reason: string } | null {
   const now = plannedSize(f.team);
   const idle = f.team.free - f.team.pendingLetGos;
   if (idle < 2 || f.capacity.issuesReadyToStart > 0 || f.capacity.prsAwaitingQa > 0) return null;
   const size = Math.max(1, now - (idle - 1));
   if (size >= now) return null;
-  return { size, reason: `${idle} of ${f.team.size} agents on floor ${f.floor} are idle with nothing ready to start or test; ${size} can keep up with what comes in.` };
+  return { size, reason: `${idle} of ${f.team.size} agents on project ${f.project} are idle with nothing ready to start or test; ${size} can keep up with what comes in.` };
 }
 
 /** A scripted CEO that uses the real office tools, so team changes, profiles and issues behave exactly as in the real thing. */
@@ -1147,10 +1147,10 @@ function ceoSession(opts: SessionOptions, cb: SessionCallbacks): SessionHandle {
   const status = async () => {
     await step([{ kind: 'tool', tool: 'mcp__office__company_status', text: `⏺ ${describeOfficeTool('company_status', {})}` }]);
     const s = JSON.parse(await office.call('company_status', {})) as DemoStatus;
-    const agents = s.floors.reduce((n, f) => n + f.team.size, 0);
-    const free = s.floors.reduce((n, f) => n + f.team.free, 0);
-    const issues = s.floors.reduce((n, f) => n + f.backlog.length, 0);
-    cb.log([{ kind: 'result', text: `  ⎿ ${s.floors.length} floors · ${agents} agents · ${free} free · ${issues} open issues · ${s.pendingChanges.length} team changes pending` }]);
+    const agents = s.projects.reduce((n, f) => n + f.team.size, 0);
+    const free = s.projects.reduce((n, f) => n + f.team.free, 0);
+    const issues = s.projects.reduce((n, f) => n + f.backlog.length, 0);
+    cb.log([{ kind: 'result', text: `  ⎿ ${s.projects.length} projects · ${agents} agents · ${free} free · ${issues} open issues · ${s.pendingChanges.length} team changes pending` }]);
     return s;
   };
   const use = async (name: string, args: Record<string, unknown>) => {
@@ -1167,31 +1167,31 @@ function ceoSession(opts: SessionOptions, cb: SessionCallbacks): SessionHandle {
   const after = (s: DemoStatus, added: number) => {
     const who = added === 1 ? 'The new agent' : 'The new agents';
     if (/auto|straight away/i.test(s.company.scaling)) return added > 0 ? `${who} ${added === 1 ? 'is' : 'are'} on the way up.` : 'Idle agents leave first; anyone busy finishes their task.';
-    return added > 0 ? `${who} ${added === 1 ? 'waits' : 'wait'} in the lobby for you to set up and hire.` : "It's an envelope on the desk of whoever I picked to leave, waiting for your decision.";
+    return added > 0 ? `${who} ${added === 1 ? 'waits' : 'wait'} in Team changes for you to set up and hire.` : "It's an envelope on the desk of whoever I picked to leave, waiting for your decision.";
   };
   /** scale_team with the call made, and a sentence on how it went. */
-  const scale = async (s: DemoStatus, f: DemoFloor, call: { size: number; reason: string }) => {
-    const out = await use('scale_team', { floor: f.floor, ...call });
+  const scale = async (s: DemoStatus, f: DemoProject, call: { size: number; reason: string }) => {
+    const out = await use('scale_team', { project: f.project, ...call });
     return out.startsWith('Refused')
-      ? `I wanted floor ${f.floor} at ${plural(call.size, 'agent')}, but the office said no: ${refused(out)}`
-      : `Floor ${f.floor} goes from ${f.team.size} to ${plural(call.size, 'agent')}: ${call.reason} ${after(s, call.size - plannedSize(f.team))}`;
+      ? `I wanted project ${f.project} at ${plural(call.size, 'agent')}, but the office said no: ${refused(out)}`
+      : `Project ${f.project} goes from ${f.team.size} to ${plural(call.size, 'agent')}: ${call.reason} ${after(s, call.size - plannedSize(f.team))}`;
   };
 
   /** Files the brief's first three issues; returns the skeleton's number. */
-  const planIssues = async (floor: number, mission: string) => {
+  const planIssues = async (project: number, mission: string) => {
     const first = await use('file_issue', {
-      floor,
+      project,
       title: 'Set up the project skeleton',
       body: `Scaffold the app so the rest of the milestone has something to build on.\n\nBrief: ${mission}\n\nAcceptance criteria:\n- The dev server starts\n- A placeholder home page renders\n- Lint, tests and build scripts exist`,
     });
     const n = Number(first.match(/#(\d+)/)?.[1] ?? 0);
     await use('file_issue', {
-      floor,
+      project,
       title: `Build the core: ${short(mission, 60)}`,
       body: `${n ? `Depends on #${n}\n\n` : ''}Implement the heart of the brief.\n\nAcceptance criteria:\n- The main flow works end to end\n- Covered by tests`,
     });
     await use('file_issue', {
-      floor,
+      project,
       title: 'Polish: phone layout and empty states',
       body: `${n ? `Depends on #${n}\n\n` : ''}Make every screen work at 375px and add friendly empty states.`,
     });
@@ -1199,46 +1199,46 @@ function ceoSession(opts: SessionOptions, cb: SessionCallbacks): SessionHandle {
   };
 
   const scripts = {
-    async onboard(floor: number, fullName: string) {
+    async onboard(project: number, fullName: string) {
       const s = await status();
-      const f = s.floors.find((x) => x.floor === floor);
-      if (!f) return 'That floor has gone, so there was nothing to onboard.';
+      const f = s.projects.find((x) => x.project === project);
+      if (!f) return 'That project has gone, so there was nothing to onboard.';
       const p = PROFILES[fullName.split('/')[1] ?? ''] ?? GENERIC;
       await read(`${f.repo}/README.md`, 48);
       await step([{ kind: 'tool', tool: 'Glob', text: '⏺ Glob src/**/*' }, { kind: 'result', text: '  ⎿ Found 23 files' }]);
       await read('package.json', 36);
       await think(`${p.summary}. Let me size the team for the work in sight.`);
-      await use('set_floor_profile', { floor, summary: p.summary, qa_brief: p.qa });
+      await use('set_project_profile', { project, summary: p.summary, qa_brief: p.qa });
       const ready = f.capacity.issuesReadyToStart;
       const grow = demoGrow(f, ready);
       const team = grow ? await scale(s, f, grow) : `Its ${plural(f.team.size, 'agent')} can keep up with the ${plural(ready, 'issue')} ready to start.`;
       const next = f.brief ? ' Your brief is next on my list: I plan it as soon as this is done.' : f.backlog.length === 0 ? ' The backlog is empty: tell me what you would like built and I will plan it.' : '';
-      return [`Floor ${floor}: ${p.summary}. I wrote a QA brief for it.`, team, next].filter(Boolean).join(' ');
+      return [`Project ${project}: ${p.summary}. I wrote a QA brief for it.`, team, next].filter(Boolean).join(' ');
     },
-    async plan(floor: number, mission: string) {
+    async plan(project: number, mission: string) {
       const s = await status();
-      const f = s.floors.find((x) => x.floor === floor);
-      if (!f) return 'That floor has gone, so there was nothing to plan.';
+      const f = s.projects.find((x) => x.project === project);
+      if (!f) return 'That project has gone, so there was nothing to plan.';
       await read(`${f.repo}/README.md`, 12);
       await think("Foundation first, so the parallel work doesn't collide.");
-      const n = await planIssues(floor, mission);
+      const n = await planIssues(project, mission);
       const grow = demoGrow(f, f.capacity.issuesReadyToStart + (n ? 1 : 0));
       const team = grow ? ` ${await scale(s, f, grow)}` : '';
-      return `I turned the brief into three issues on floor ${floor}. #${n} sets up the skeleton; the other two say "Depends on #${n}", so nobody starts them early.${team}`;
+      return `I turned the brief into three issues on project ${project}. #${n} sets up the skeleton; the other two say "Depends on #${n}", so nobody starts them early.${team}`;
     },
     async review() {
       const s = await status();
-      await think('Checking each floor for work waiting on free agents, and agents waiting on work.');
-      for (const f of s.floors) {
+      await think('Checking each project for work waiting on free agents, and agents waiting on work.');
+      for (const f of s.projects) {
         const call = demoShrink(f) ?? demoGrow(f, f.capacity.issuesReadyToStart);
         if (call) return scale(s, f, call);
       }
-      const issues = s.floors.reduce((n, f) => n + f.backlog.length, 0);
-      const prs = s.floors.reduce((n, f) => n + f.pullRequests.length, 0);
-      return `All ${s.floors.length} floors look healthy: ${issues} open issues and ${prs} pull requests in flight. No changes needed.`;
+      const issues = s.projects.reduce((n, f) => n + f.backlog.length, 0);
+      const prs = s.projects.reduce((n, f) => n + f.pullRequests.length, 0);
+      return `All ${s.projects.length} projects look healthy: ${issues} open issues and ${prs} pull requests in flight. No changes needed.`;
     },
     // A stuck PR: read what QA and GitHub say, then act through the real triage tools, as the real CEO would.
-    async triage(floor: number, pr: number, facts: string) {
+    async triage(project: number, pr: number, facts: string) {
       await step([{ kind: 'tool', tool: 'Read', text: `⏺ Read PR #${pr}'s QA report` }, { kind: 'result', text: '  ⎿ Read 38 lines' }]);
       const conflict = /mergeable: CONFLICTING/.test(facts);
       const red = /GitHub checks: failing/.test(facts);
@@ -1251,54 +1251,54 @@ function ceoSession(opts: SessionOptions, cb: SessionCallbacks): SessionHandle {
           : again
             ? ['escalate', { reason: 'It got stuck twice for the same reason; worth a look at the issue itself.' }, 'is with you now']
             : ['retry_qa', {}, 'is back in the QA queue'];
-      const out = await use(tool, { floor, pr, ...args });
-      if (!out.startsWith('Refused')) return `PR #${pr} on floor ${floor} was stuck. It ${done}.`;
-      await use('escalate', { floor, pr, reason: `I tried ${tool}, but the office refused: ${refused(out)}` });
-      return `PR #${pr} on floor ${floor} is stuck and I couldn't move it, so it's with you now.`;
+      const out = await use(tool, { project, pr, ...args });
+      if (!out.startsWith('Refused')) return `PR #${pr} on project ${project} was stuck. It ${done}.`;
+      await use('escalate', { project, pr, reason: `I tried ${tool}, but the office refused: ${refused(out)}` });
+      return `PR #${pr} on project ${project} is stuck and I couldn't move it, so it's with you now.`;
     },
     async chat(text: string) {
       const s = await status();
       await think('Reading your message.');
       // "close #3, superseded by #5": through the real tool.
       const close = text.match(/\bclose #(\d+)[\s,:;.-]*(.*)/i);
-      const closeFloor = close && (s.floors.find((f) => f.backlog.some((i) => i.number === Number(close[1]))) ?? s.floors[0]);
-      if (close && closeFloor) {
+      const closeProject = close && (s.projects.find((f) => f.backlog.some((i) => i.number === Number(close[1]))) ?? s.projects[0]);
+      if (close && closeProject) {
         const reason = close[2].trim() || 'No longer wanted.';
-        const out = await use('close_issue', { floor: closeFloor.floor, number: Number(close[1]), reason });
+        const out = await use('close_issue', { project: closeProject.project, number: Number(close[1]), reason });
         return out.startsWith('Refused') ? `I couldn't close #${close[1]}: ${refused(out)}` : `Done: ${out} I left "${short(reason, 80)}" on it as a comment.`;
       }
       // Asked for a bigger team: one more agent where the most work waits, through the real tool.
       if (/\b(hire|hiring|grow|team|bigger)\b/i.test(text)) {
-        if (!s.floors.length) return 'There are no floors yet: add a project first, and I will size its team.';
-        const room = s.floors.filter((f) => plannedSize(f.team) < f.team.max);
-        if (!room.length) return `Every floor is at its most agents (${s.floors[0].team.max}). Raise it in Settings → Most agents per floor, and I'll grow the busiest one.`;
-        const f = room.sort((a, b) => b.capacity.issuesReadyToStart - b.team.free - (a.capacity.issuesReadyToStart - a.team.free) || a.floor - b.floor)[0];
+        if (!s.projects.length) return 'There are no projects yet: add a project first, and I will size its team.';
+        const room = s.projects.filter((f) => plannedSize(f.team) < f.team.max);
+        if (!room.length) return `Every project is at its most agents (${s.projects[0].team.max}). Raise it in Settings → Most agents per project, and I'll grow the busiest one.`;
+        const f = room.sort((a, b) => b.capacity.issuesReadyToStart - b.team.free - (a.capacity.issuesReadyToStart - a.team.free) || a.project - b.project)[0];
         const ready = f.capacity.issuesReadyToStart;
         return scale(s, f, {
           size: plannedSize(f.team) + 1,
-          reason: `You asked for a bigger team, and floor ${f.floor} has the most work waiting: ${plural(ready, 'issue')} ready to start, ${plural(f.team.free, 'agent')} free.`,
+          reason: `You asked for a bigger team, and project ${f.project} has the most work waiting: ${plural(ready, 'issue')} ready to start, ${plural(f.team.free, 'agent')} free.`,
         });
       }
-      const agents = s.floors.reduce((n, f) => n + f.team.size, 0);
-      const issues = s.floors.reduce((n, f) => n + f.backlog.length, 0);
+      const agents = s.projects.reduce((n, f) => n + f.team.size, 0);
+      const issues = s.projects.reduce((n, f) => n + f.backlog.length, 0);
       const pending = s.pendingChanges.length;
       // Real CEOs answer in Markdown, so the demo one does too: every element the phone renders.
-      const rows = s.floors.map((f) => `| ${f.floor} | \`${f.repo.split('/').pop()}\` | ${f.team.size} | ${f.backlog.length} | ${f.pullRequests.length} |`);
+      const rows = s.projects.map((f) => `| ${f.project} | \`${f.repo.split('/').pop()}\` | ${f.team.size} | ${f.backlog.length} | ${f.pullRequests.length} |`);
       return [
-        `**Quick status:** ${s.floors.length} floor${s.floors.length === 1 ? '' : 's'}, ${agents} agents and ${issues} open issues.`,
+        `**Quick status:** ${s.projects.length} project${s.projects.length === 1 ? '' : 's'}, ${agents} agents and ${issues} open issues.`,
         '',
         '- The team is *heads down* on the backlog',
         `- ${pending ? `**${pending}** team change${pending === 1 ? ' is' : 's are'} waiting for your decision` : 'No team changes waiting on you'}`,
         '  - QA re-tests every PR after a fix',
         '',
-        '| Floor | Repo | Agents | Issues | PRs |',
+        '| Project | Repo | Agents | Issues | PRs |',
         '| ---: | --- | ---: | ---: | ---: |',
         ...(rows.length ? rows : ['| – | no projects yet | 0 | 0 | 0 |']),
         '',
         'What I would do next:',
         '',
         '1. Merge anything that passed QA',
-        '2. Run `npm run build` on each floor before the next milestone',
+        '2. Run `npm run build` on each project before the next milestone',
         '3. Grow a team only where work keeps waiting for free agents',
         '',
         '```bash',
@@ -1312,14 +1312,14 @@ function ceoSession(opts: SessionOptions, cb: SessionCallbacks): SessionHandle {
 
   const prompt = opts.prompt;
   const where = prompt.match(/[Ff]loor (\d+) \(([^,)]+)/);
-  const triage = prompt.match(/^Triage: pull request #(\d+) on floor (\d+)/);
+  const triage = prompt.match(/^Triage: pull request #(\d+) on project (\d+)/);
   const run = triage
     ? () => scripts.triage(Number(triage[2]), Number(triage[1]), prompt)
     : /no longer needs triage/.test(prompt)
       ? async () => 'Nothing to do.'
       : /just joined the company/.test(prompt)
         ? () => scripts.onboard(Number(where?.[1]), where?.[2] ?? '')
-        : /has a brief for floor/.test(prompt)
+        : /has a brief for project/.test(prompt)
           ? () => scripts.plan(Number(where?.[1]), prompt.match(/"""([\s\S]*?)"""/)?.[1]?.trim() ?? '')
           : /Periodic review/.test(prompt)
             ? () => scripts.review()

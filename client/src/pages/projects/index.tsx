@@ -16,13 +16,13 @@ import { agentsOnRepo, useStore } from '@/store';
 import { AddProjectDialog } from './add-project-dialog';
 import { attempt, disconnectProject } from './actions';
 
-/** /projects: every project (a cubefarm floor) with its checkout, sync and automation, and ?add=1 to add one. */
+/** /projects: every project with its checkout, sync and automation, and ?add=1 to add one. */
 export default function ProjectsPage() {
   const rows = useProjectRows();
   const [params, setParams] = useSearchParams();
   const adding = params.get('add') === '1';
   const setAdding = (open: boolean) => setParams(open ? { add: '1' } : {}, { replace: true });
-  const sorted = [...rows].sort((a, b) => a.repo.floor - b.repo.floor);
+  const sorted = [...rows].sort((a, b) => a.repo.number - b.repo.number);
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

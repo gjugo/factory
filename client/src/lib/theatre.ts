@@ -62,7 +62,7 @@ if (typeof window !== 'undefined' && !Object.getOwnPropertyDescriptor(window, '_
     get: () => {
       const s = useStore.getState();
       return {
-        main: s.repos.map((r) => ({ repoId: r.id, floor: r.floor, status: r.preview.status, url: r.preview.url, ref: r.preview.ref, port: r.preview.port, channel: onScreen.get(r.id) ?? null })),
+        main: s.repos.map((r) => ({ repoId: r.id, project: r.number, status: r.preview.status, url: r.preview.url, ref: r.preview.ref, port: r.preview.port, channel: onScreen.get(r.id) ?? null })),
         prs: Object.values(s.prPreviews).map((p) => ({
           repoId: p.repoId,
           pr: p.pr,

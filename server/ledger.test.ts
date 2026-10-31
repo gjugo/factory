@@ -105,7 +105,7 @@ describe('the state file', () => {
     const old = loadLedger({
       seen: ['merge:x#1'],
       prs: { [`${R}#3`]: { author: 'ada', title: 'Sound', qaPass: 1, first: 'pass', ci: 'green', needsHuman: true, since: NOON } },
-      floors: { [R]: { coins: 40, earned: 60, merges: 3, owned: { plant: 1 }, placed: { 'f-ne': 'plant' }, firstPr: { n: 1, title: 'x' }, streak: [] } },
+      projects: { [R]: { coins: 40, earned: 60, merges: 3, owned: { plant: 1 }, placed: { 'f-ne': 'plant' }, firstPr: { n: 1, title: 'x' }, streak: [] } },
       careers: { ada: { since: NOON, merged: 2, reviews: 1 } },
       achievements: [{ id: 'first-merge', at: NOON, detail: '' }],
       coffees: 4,

@@ -1,4 +1,4 @@
-// Agents' machines (docs/agents.md): every agent works on a machine of its own, with its own clone of its floor's
+// Agents' machines (docs/agents.md): every agent works on a machine of its own, with its own clone of its project's
 // repository, its worktree of that clone (where its branches are checked out) and its temp folder. A machine is a
 // folder on this computer (the local provider, server/workspace.ts) or an Upstash Box in the cloud (server/boxMachines.ts,
 // docs/cloud.md), behind the same calls. A machine is named after its agent (machineName), so a rename moves nothing.

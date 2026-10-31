@@ -26,9 +26,9 @@ export function fixGoesTo(author: FixAuthor | null, authorFree: boolean, prNumbe
 export const SELF_QA_WAIT_MS = 15 * 60_000;
 
 /**
- * Who of the floor's free agents (by desk) tests a PR: anyone but its author, those whose failed PRs wait for them
+ * Who of the project's free agents (by desk) tests a PR: anyone but its author, those whose failed PRs wait for them
  * last (they stay free for their own fixes). The author tests their own PR, in a fresh session like anyone, only when
- * nobody else on the floor can (`othersCan`: another agent who isn't stopped) or after SELF_QA_WAIT_MS without one.
+ * nobody else on the project can (`othersCan`: another agent who isn't stopped) or after SELF_QA_WAIT_MS without one.
  * Null: it waits.
  */
 export function pickTester<T extends { id: string; desk: number }>(free: T[], author: string | null, owed: ReadonlySet<string>, othersCan: boolean, waitedMs: number): T | null {

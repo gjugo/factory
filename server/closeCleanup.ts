@@ -21,8 +21,8 @@ export interface KnownPull {
 /** A PR the office learned is closed or merged, and when. */
 export type LearnedPull = KnownPull & { at: number };
 
-/** What the office knows about one floor's issues and PRs right now. */
-export interface FloorState {
+/** What the office knows about one project's issues and PRs right now. */
+export interface ProjectState {
   fetchedAt: number; // when the last sync's fetch started
   openIssues: readonly number[]; // the last sync's open issues
   pulls: readonly KnownPull[]; // the last sync's open and recently merged PRs
@@ -31,10 +31,10 @@ export interface FloorState {
 }
 
 /** Learned after the last list was fetched, so it wins over what the list says. */
-const newer = (at: number, f: FloorState) => at >= f.fetchedAt;
+const newer = (at: number, f: ProjectState) => at >= f.fetchedAt;
 
 /** Is the issue open? null: the office can't tell (the sync lists at most 100 open issues). */
-export function issueOpen(n: number, f: FloorState): boolean | null {
+export function issueOpen(n: number, f: ProjectState): boolean | null {
   const learned = f.closedIssues.get(n);
   const listed = f.openIssues.includes(n);
   if (learned !== undefined && (!listed || newer(learned, f))) return false;
@@ -42,7 +42,7 @@ export function issueOpen(n: number, f: FloorState): boolean | null {
 }
 
 /** The PR as the office last saw it; null when the sync doesn't list it and nobody asked. */
-export function pullNow(n: number, f: FloorState): KnownPull | null {
+export function pullNow(n: number, f: ProjectState): KnownPull | null {
   const listed = f.pulls.find((p) => p.number === n) ?? null;
   const learned = f.closedPulls.get(n);
   return learned && (!listed || newer(learned.at, f)) ? learned : listed;
@@ -52,7 +52,7 @@ export function pullNow(n: number, f: FloorState): KnownPull | null {
  * May an issue, QA or fix task start? live: GitHub's answer just now (null: it couldn't be asked). Without one, the
  * office's latest view decides, and what it can't tell counts as open: a task is never refused on a guess.
  */
-export function stillOpen(t: { kind: 'issue' | 'pr'; number: number }, f: FloorState, live?: PullState | null): boolean {
+export function stillOpen(t: { kind: 'issue' | 'pr'; number: number }, f: ProjectState, live?: PullState | null): boolean {
   if (live) return live === 'OPEN';
   if (t.kind === 'issue') return issueOpen(t.number, f) !== false;
   const p = pullNow(t.number, f);
@@ -60,7 +60,7 @@ export function stillOpen(t: { kind: 'issue' | 'pr'; number: number }, f: FloorS
 }
 
 /** Learned closures the office can forget: listed open by a newer sync (reopened), or a day old. */
-export function forgettable(f: FloorState, now: number): { issues: number[]; pulls: number[] } {
+export function forgettable(f: ProjectState, now: number): { issues: number[]; pulls: number[] } {
   const stale = (at: number) => now - at > 24 * 60 * 60_000;
   return {
     issues: [...f.closedIssues].filter(([n, at]) => stale(at) || (!newer(at, f) && f.openIssues.includes(n))).map(([n]) => n),
@@ -99,7 +99,7 @@ export const ASK_AGAIN_MS = 10 * 60_000;
  * Issues and PRs that agents, QA records or holds (toHold) hold but the last sync can't vouch for: GitHub is asked
  * about each. openAt: when GitHub last said one was open, by `issue#<n>` / `pr#<n>`.
  */
-export function toAsk(agents: readonly Holder[], records: readonly HeldRecord[], held: readonly number[], f: FloorState, openAt: ReadonlyMap<string, number>, now: number) {
+export function toAsk(agents: readonly Holder[], records: readonly HeldRecord[], held: readonly number[], f: ProjectState, openAt: ReadonlyMap<string, number>, now: number) {
   const fresh = (key: string) => now - (openAt.get(key) ?? -Infinity) < ASK_AGAIN_MS;
   const issues = new Set<number>();
   const pulls = new Set<number>();
@@ -126,7 +126,7 @@ export type Closure =
   | { kind: 'pr'; number: number; merged: boolean; headRefName: string };
 
 /** The merged PRs the office knows of that resolve issue n. */
-function mergedResolving(n: number, f: FloorState) {
+function mergedResolving(n: number, f: ProjectState) {
   const numbers = new Set([...f.pulls.map((p) => p.number), ...f.closedPulls.keys()]);
   return [...numbers]
     .map((x) => pullNow(x, f)!)
@@ -135,7 +135,7 @@ function mergedResolving(n: number, f: FloorState) {
 }
 
 /** The closed or merged PRs, then issues, that agents or QA records still hold. */
-export function closuresHeld(agents: readonly Holder[], records: readonly HeldRecord[], f: FloorState): Closure[] {
+export function closuresHeld(agents: readonly Holder[], records: readonly HeldRecord[], f: ProjectState): Closure[] {
   const prs = new Map<number, Closure>();
   const issues = new Map<number, Closure>();
   const pull = (n: number | null) => {
@@ -173,7 +173,7 @@ function mergedEnd(a: Holder, c: Closure) {
 }
 
 /**
- * What happens to the floor's agents and QA records when an issue or PR closes. Whoever works on a closed issue or an
+ * What happens to the project's agents and QA records when an issue or PR closes. Whoever works on a closed issue or an
  * unmerged closed PR stops; a merge stops nobody. Agents who only have it on their card are cleared, except one who
  * tested it, after a merge: their last run stays on their monitor until their next one. A PR's record leaves QA, unless it merged
  * while a QA run or fix is still going (that one leaves once it ends).
@@ -203,7 +203,7 @@ export function afterClose(c: Closure, agents: readonly Holder[], records: reado
  * Closing a PR never puts its issue back in line by itself: the open issues it resolved wait for the manager to assign
  * them again, or close them. (A merge closes them instead.)
  */
-export function toHold(pr: KnownPull, f: FloorState): number[] {
+export function toHold(pr: KnownPull, f: ProjectState): number[] {
   return pr.state === 'CLOSED' ? issuesResolvedBy(pr).filter((n) => issueOpen(n, f) !== false) : [];
 }
 

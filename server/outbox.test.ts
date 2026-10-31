@@ -14,16 +14,16 @@ function tab() {
 }
 
 const people = [
-  { id: 'ken', floor: 1 },
-  { id: 'ada', floor: 1 },
-  { id: 'grace', floor: 2 },
+  { id: 'ken', project: 1 },
+  { id: 'ada', project: 1 },
+  { id: 'grace', project: 2 },
 ];
 const buffers: Record<string, LogLine[]> = { ken: [line(1), line(2)], ada: [line(3, 'text')], grace: [line(4), line(5, 'result')] };
 
 function outbox() {
   return new Outbox({ agents: () => people, log: (id) => buffers[id] ?? [] });
 }
-const watch = (t: Tab, o: Outbox, floor: number, agents: string[] = [], workers = false) => o.receive(t, JSON.stringify({ type: 'lines', floor, agents, workers }));
+const watch = (t: Tab, o: Outbox, project: number, agents: string[] = [], workers = false) => o.receive(t, JSON.stringify({ type: 'lines', project, agents, workers }));
 
 afterEach(() => vi.useRealTimers());
 
@@ -68,23 +68,23 @@ describe('agent patches', () => {
   });
 });
 
-describe('floor patches', () => {
-  it("carry only the parts of a floor that changed: a sync that found nothing new is just its time", () => {
+describe('project patches', () => {
+  it("carry only the parts of a project that changed: a sync that found nothing new is just its time", () => {
     const o = outbox();
     const t = tab();
     o.add(t);
-    const floor = { id: 'acme/app', floor: 1, issues: [{ number: 1 }], pulls: [{ number: 2 }], lastSync: 1 } as unknown as RepoView;
-    o.seed([], [floor]);
-    o.repo({ ...floor, lastSync: 2 });
-    o.repo({ ...floor, lastSync: 3 });
+    const project = { id: 'acme/app', project: 1, issues: [{ number: 1 }], pulls: [{ number: 2 }], lastSync: 1 } as unknown as RepoView;
+    o.seed([], [project]);
+    o.repo({ ...project, lastSync: 2 });
+    o.repo({ ...project, lastSync: 3 });
     o.flush();
-    o.repo({ ...floor, lastSync: 4, pulls: [] });
+    o.repo({ ...project, lastSync: 4, pulls: [] });
     o.flush();
     expect(t.got).toEqual([
       { type: 'repos', repos: [{ id: 'acme/app', lastSync: 3 }] },
       { type: 'repos', repos: [{ id: 'acme/app', lastSync: 4, pulls: [] }] },
     ]);
-    o.repo({ ...floor, lastSync: 5 });
+    o.repo({ ...project, lastSync: 5 });
     o.broadcast({ type: 'repoRemoved', repoId: 'acme/app' });
     o.flush();
     expect(t.got.at(-1)).toEqual({ type: 'repoRemoved', repoId: 'acme/app' });
@@ -92,20 +92,20 @@ describe('floor patches', () => {
 });
 
 describe('terminal lines', () => {
-  it('go only to tabs that show them: their floor, an open panel, or the workers list (latest line only)', () => {
+  it('go only to tabs that show them: their project, an open panel, or the workers list (latest line only)', () => {
     const o = outbox();
-    const [floor1, panel, list, lobby] = [tab(), tab(), tab(), tab()];
-    for (const t of [floor1, panel, list, lobby]) o.add(t);
-    watch(floor1, o, 1);
+    const [project1, panel, list, lobby] = [tab(), tab(), tab(), tab()];
+    for (const t of [project1, panel, list, lobby]) o.add(t);
+    watch(project1, o, 1);
     watch(panel, o, 0, ['grace']);
     watch(list, o, 0, [], true);
     watch(lobby, o, 0);
-    for (const t of [floor1, panel, list, lobby]) t.got.length = 0;
+    for (const t of [project1, panel, list, lobby]) t.got.length = 0;
 
     o.log('ken', [line(10), line(11, 'result')]);
     o.log('grace', [line(12, 'text')]);
     o.flush();
-    expect(floor1.got).toEqual([{ type: 'logs', tails: { ken: [line(10), line(11, 'result')] } }]);
+    expect(project1.got).toEqual([{ type: 'logs', tails: { ken: [line(10), line(11, 'result')] } }]);
     expect(panel.got).toEqual([{ type: 'logs', tails: { grace: [line(12, 'text')] } }]);
     expect(list.got).toEqual([{ type: 'latest', lines: { ken: line(10), grace: line(12, 'text') } }]);
     expect(lobby.got).toEqual([]);

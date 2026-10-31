@@ -4,7 +4,7 @@ import { checkoutLook, folderAction, folderChoices, isRepoName, projectSlug, rep
 import { setupBody } from './setup';
 
 const gh = (nameWithOwner: string, description = ''): GhRepoSummary => ({ nameWithOwner, description, visibility: 'PRIVATE', updatedAt: '' });
-const folder = (name: string, github: string | null, floor: number | null = null): ProjectFolderView => ({ name, path: `/p/${name}`, git: !!github, github, floor });
+const folder = (name: string, github: string | null, project: number | null = null): ProjectFolderView => ({ name, path: `/p/${name}`, git: !!github, github, number: project });
 
 describe('projects helpers', () => {
   it('slugs a project name the way the server accepts it', () => {

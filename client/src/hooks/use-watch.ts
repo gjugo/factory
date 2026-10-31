@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useStore } from '../store';
-import { routeFloor } from '../watch';
+import { routeProject } from '../watch';
 
 // The hooks pages use to say what they show of the agents' terminals (watch.ts): the office then sends those lines.
 
@@ -23,8 +23,8 @@ export function useWorkersWatch() {
   }, []);
 }
 
-/** The route's project (null: none) as the watched floor. Mounted once, by the shell. */
+/** The route's project (null: none) as the watched project number. Mounted once, by the shell. */
 export function useRouteWatch(repoId: string | null) {
-  const floor = useStore((s) => routeFloor(s.repos, repoId));
-  useEffect(() => useStore.getState().setFloor(floor), [floor]);
+  const project = useStore((s) => routeProject(s.repos, repoId));
+  useEffect(() => useStore.getState().setProject(project), [project]);
 }

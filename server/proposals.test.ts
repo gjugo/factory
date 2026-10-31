@@ -3,7 +3,7 @@ import { createDemoBackend } from './demo.ts';
 import { HttpError } from './httpError.ts';
 import { Swarm } from './swarm.ts';
 
-// Team changes (docs/agents.md): the demo office grows or shrinks a floor on demand through the CEO's own scale_team,
+// Team changes (docs/agents.md): the demo office grows or shrinks a project on demand through the CEO's own scale_team,
 // a new agent waits in the lobby until the manager sets them up and hires them, and their note reaches the CEO.
 type Internals = {
   ensureCeo(interrupted: unknown[]): void;
@@ -54,28 +54,28 @@ describe('team changes waiting for the manager', () => {
     expect(team().map((a) => a.desk)).toEqual([0, 1]);
   });
 
-  it("grows no team past the floor's max, and keeps one agent", async () => {
+  it("grows no team past the project's max, and keeps one agent", async () => {
     const { swarm, team } = await office();
     swarm.updateSettings({ maxAgents: 3 });
-    expect(() => swarm.demoPropose('hire')).toThrow('Every floor already has its most agents');
+    expect(() => swarm.demoPropose('hire')).toThrow('Every project already has its most agents');
     swarm.updateSettings({ maxAgents: 10 });
     swarm.demoPropose('let-go');
     swarm.approveRequest(swarm.snapshot().requests.find((r) => r.status === 'pending')!.id);
     swarm.demoPropose('let-go');
     swarm.approveRequest(swarm.snapshot().requests.find((r) => r.status === 'pending')!.id);
     expect(team()).toHaveLength(1);
-    expect(() => swarm.demoPropose('let-go')).toThrow('No floor has an idle agent to let go');
-    expect(() => swarm.fireAgent(team()[0].id)).toThrow('every floor keeps at least one');
+    expect(() => swarm.demoPropose('let-go')).toThrow('No project has an idle agent to let go');
+    expect(() => swarm.fireAgent(team()[0].id)).toThrow('every project keeps at least one');
   });
 
-  it('refuses outside the demo, without floors, and for anything but a hire or a let-go', async () => {
+  it('refuses outside the demo, without projects, and for anything but a hire or a let-go', async () => {
     const real = new Swarm({ ...createDemoBackend(), demo: false });
     expect(() => real.demoPropose('hire')).toThrow(HttpError);
     const demo = new Swarm(createDemoBackend());
-    expect(() => demo.demoPropose('hire')).toThrow(/no floors/);
+    expect(() => demo.demoPropose('hire')).toThrow(/no projects/);
     await demo.connectRepo('demo-co/weather-api');
     expect(() => demo.demoPropose('promote')).toThrow(/kind/);
-    expect(() => demo.demoPropose('hire', 7)).toThrow(/no floor 7/);
+    expect(() => demo.demoPropose('hire', 7)).toThrow(/no project 7/);
   });
 });
 
@@ -92,7 +92,7 @@ describe('team changes applied straight away', () => {
     for (const a of busy) a.status = 'working';
     busy[0].status = 'idle';
     // From 4 to 2: the idle one leaves now, a busy one after their task.
-    const text = (swarm as unknown as { scaleTeam(x: object): string }).scaleTeam({ floor: 1, size: 2, reason: 'Nothing ready to start.' });
+    const text = (swarm as unknown as { scaleTeam(x: object): string }).scaleTeam({ project: 1, size: 2, reason: 'Nothing ready to start.' });
     expect(text).toMatch(/left; .+ will leave after their current task/);
     expect(team()).toHaveLength(3);
     const leaving = swarm.snapshot().requests.find((r) => r.kind === 'let-go' && r.status === 'pending')!;
@@ -102,14 +102,14 @@ describe('team changes applied straight away', () => {
     expect(team()).toHaveLength(2);
   });
 
-  it("never lets a floor's last agent go", async () => {
+  it("never lets a project's last agent go", async () => {
     const { swarm, team } = await office();
     swarm.updateSettings({ scaling: 'auto' });
     const internals = swarm as unknown as Internals;
     for (const a of internals.state.agents) if (a.repoId === team()[0].repoId) a.status = 'working';
-    (swarm as unknown as { scaleTeam(x: object): string }).scaleTeam({ floor: 1, size: 1, reason: 'Quiet week.' });
+    (swarm as unknown as { scaleTeam(x: object): string }).scaleTeam({ project: 1, size: 1, reason: 'Quiet week.' });
     expect(swarm.snapshot().requests.filter((r) => r.kind === 'let-go' && r.status === 'pending')).toHaveLength(2);
-    // The manager lets two go by hand meanwhile: one of those leaving is now the floor's only agent.
+    // The manager lets two go by hand meanwhile: one of those leaving is now the project's only agent.
     const [first, second] = team().map((a) => a.id);
     for (const a of internals.state.agents) a.status = 'idle';
     const keep = swarm.snapshot().requests.filter((r) => r.kind === 'let-go').map((r) => r.agentId);

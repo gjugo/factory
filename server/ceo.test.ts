@@ -3,7 +3,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it } from 'vitest';
 import type { QaStatus } from '../shared/types.ts';
 import type { HttpError } from './httpError.ts';
-import { ceoJobPrompt, ceoSystemPrompt, checkCloseIssue, createOfficeTools, floorCapacity, IssueCap, jobLabel, planDependencies, plannedSize, scalePlan, type CeoJob, type DependsRequest, type TeamNow } from './ceo.ts';
+import { ceoJobPrompt, ceoSystemPrompt, checkCloseIssue, createOfficeTools, projectCapacity, IssueCap, jobLabel, planDependencies, plannedSize, scalePlan, type CeoJob, type DependsRequest, type TeamNow } from './ceo.ts';
 
 describe('scalePlan (scale_team)', () => {
   // Desks 0-3: Ada and Linus are free, Grace and Alan busy; one new agent waits in the lobby.
@@ -46,7 +46,7 @@ describe('scalePlan (scale_team)', () => {
     expect(scalePlan(team({ pendingHires: [], pendingLetGos: [{ id: 'l1', agentId: 'linus' }] }), 2, 10).letGo).toEqual(['ada']);
   });
 
-  it("keeps at least one agent, and no more than the floor's max", () => {
+  it("keeps at least one agent, and no more than the project's max", () => {
     expect(scalePlan(team(), 0, 10).size).toBe(1);
     expect(scalePlan(team(), 40, 10)).toMatchObject({ size: 10, hire: 5 });
     expect(scalePlan(team({ pendingHires: [] }), 4, 10)).toEqual({ size: 4, hire: 0, cancelHires: [], letGo: [], cancelLetGos: [] });
@@ -55,30 +55,30 @@ describe('scalePlan (scale_team)', () => {
 
 describe('jobLabel', () => {
   const job = (kind: CeoJob['kind']): CeoJob => ({ kind, repoId: 'r1', at: 0 });
-  const floor = { floor: 3, fullName: 'leonvanzyl/office-swarm' };
+  const project = { number: 3, fullName: 'leonvanzyl/office-swarm' };
 
-  it('names the floor and repo for floor jobs', () => {
-    expect(jobLabel(job('onboard'), floor)).toBe('Onboarding floor 3 · office-swarm');
-    expect(jobLabel(job('plan'), floor)).toBe('Planning floor 3 · office-swarm');
+  it('names the project and repo for project jobs', () => {
+    expect(jobLabel(job('onboard'), project)).toBe('Onboarding project 3 · office-swarm');
+    expect(jobLabel(job('plan'), project)).toBe('Planning project 3 · office-swarm');
   });
 
   it('falls back to the full name when it has no owner', () => {
-    expect(jobLabel(job('plan'), { floor: 1, fullName: 'solo' })).toBe('Planning floor 1 · solo');
+    expect(jobLabel(job('plan'), { number: 1, fullName: 'solo' })).toBe('Planning project 1 · solo');
   });
 
-  it('says so when the floor is gone', () => {
-    expect(jobLabel(job('onboard'), null)).toBe('Onboarding a removed floor');
-    expect(jobLabel(job('plan'), null)).toBe('Planning a removed floor');
+  it('says so when the project is gone', () => {
+    expect(jobLabel(job('onboard'), null)).toBe('Onboarding a removed project');
+    expect(jobLabel(job('plan'), null)).toBe('Planning a removed project');
   });
 
-  it('labels company-wide jobs without a floor', () => {
-    expect(jobLabel(job('review'), floor)).toBe('Reviewing the company');
+  it('labels company-wide jobs without a project', () => {
+    expect(jobLabel(job('review'), project)).toBe('Reviewing the company');
     expect(jobLabel(job('review'), null)).toBe('Reviewing the company');
     expect(jobLabel({ kind: 'chat', text: 'hi', at: 0 }, null)).toBe('Replying to you');
   });
 
   it('names the PR for a triage', () => {
-    expect(jobLabel({ kind: 'triage', repoId: 'r1', prNumber: 108, at: 0 }, floor)).toBe('Triaging PR #108 · floor 3 · office-swarm');
+    expect(jobLabel({ kind: 'triage', repoId: 'r1', prNumber: 108, at: 0 }, project)).toBe('Triaging PR #108 · project 3 · office-swarm');
   });
 });
 
@@ -86,11 +86,11 @@ describe('jobLabel', () => {
 // (z.record did this) empties tools/list, and the CEO silently loses every tool.
 describe('office tools', () => {
   const connect = async () => {
-    const floors: unknown[] = [];
+    const projects: unknown[] = [];
     const office = createOfficeTools({
       companyStatus: () => '{}',
       agentDetail: () => '{}',
-      setFloorProfile: (a) => (floors.push(a), 'saved'),
+      setProjectProfile: (a) => (projects.push(a), 'saved'),
       scaleTeam: () => '',
       configureAgent: () => '',
       fileIssue: async () => '',
@@ -106,7 +106,7 @@ describe('office tools', () => {
     await office.server.instance.connect(serverSide);
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(clientSide);
-    return { client, floors };
+    return { client, projects };
   };
 
   it('lists every tool the CEO relies on', async () => {
@@ -125,14 +125,14 @@ describe('office tools', () => {
       'scale_team',
       'send_back',
       'set_dependencies',
-      'set_floor_profile',
+      'set_project_profile',
     ]);
   });
 
   it('still takes preview_env as a map of strings', async () => {
-    const { client, floors } = await connect();
-    await client.callTool({ name: 'set_floor_profile', arguments: { floor: 1, preview_env: { VITE_API: 'http://localhost:{port}' } } });
-    expect(floors).toEqual([{ floor: 1, preview_env: { VITE_API: 'http://localhost:{port}' } }]);
+    const { client, projects } = await connect();
+    await client.callTool({ name: 'set_project_profile', arguments: { project: 1, preview_env: { VITE_API: 'http://localhost:{port}' } } });
+    expect(projects).toEqual([{ project: 1, preview_env: { VITE_API: 'http://localhost:{port}' } }]);
   });
 });
 
@@ -144,7 +144,7 @@ describe('checkCloseIssue (close_issue)', () => {
   ];
   const status = (state: 'OPEN' | 'CLOSED' | null, number = 6) => {
     try {
-      checkCloseIssue({ floor: 1, number, state, pulls });
+      checkCloseIssue({ project: 1, number, state, pulls });
       return 'ok';
     } catch (err) {
       return (err as HttpError).status;
@@ -156,22 +156,22 @@ describe('checkCloseIssue (close_issue)', () => {
     expect(status('OPEN', 5)).toBe('ok');
   });
 
-  it('refuses a closed or unknown issue, which is how another floor\'s issue looks too', () => {
+  it('refuses a closed or unknown issue, which is how another project\'s issue looks too', () => {
     expect(status('CLOSED')).toBe(404);
     expect(status(null)).toBe(404);
-    expect(() => checkCloseIssue({ floor: 2, number: 6, state: 'CLOSED', pulls })).toThrow('#6 on floor 2 is already closed.');
+    expect(() => checkCloseIssue({ project: 2, number: 6, state: 'CLOSED', pulls })).toThrow('#6 on project 2 is already closed.');
   });
 
   it('refuses an issue an open PR closes', () => {
     expect(status('OPEN', 4)).toBe(409);
-    expect(() => checkCloseIssue({ floor: 1, number: 4, state: 'OPEN', pulls })).toThrow('PR #20 closes #4. Close or finish that pull request first.');
+    expect(() => checkCloseIssue({ project: 1, number: 4, state: 'OPEN', pulls })).toThrow('PR #20 closes #4. Close or finish that pull request first.');
   });
 });
 
 describe('planDependencies (set_dependencies)', () => {
   // #1 ← #2 ← #3 is a two-step chain; #5 waits for #4; #9 is closed.
   const base: DependsRequest = {
-    floor: 1,
+    project: 1,
     number: 4,
     dependsOn: [],
     issues: [
@@ -190,19 +190,19 @@ describe('planDependencies (set_dependencies)', () => {
   it('rewrites the Depends on line and leaves the rest of the body alone', () => {
     expect(deps({ number: 5, dependsOn: [6] }).body).toBe('Depends on #6\n\nIntro\n\nMore');
     expect(deps({ number: 5, dependsOn: [] }).body).toBe('Intro\n\nMore');
-    expect(deps({ number: 6, dependsOn: [1, 4] })).toEqual({ body: 'Depends on #1, #4\n\nFree', summary: '#6 on floor 1: depends on #1, #4.' });
-    expect(deps({ number: 4, dependsOn: [] })).toEqual({ body: null, summary: '#4 on floor 1: no dependencies.' });
+    expect(deps({ number: 6, dependsOn: [1, 4] })).toEqual({ body: 'Depends on #1, #4\n\nFree', summary: '#6 on project 1: depends on #1, #4.' });
+    expect(deps({ number: 4, dependsOn: [] })).toEqual({ body: null, summary: '#4 on project 1: no dependencies.' });
   });
 
   it('refuses a closed or unknown issue', () => {
     expect(() => deps({ number: 9 })).toThrow('#9 is closed.');
-    expect(() => deps({ number: 42 })).toThrow('There is no open issue #42 on floor 1.');
+    expect(() => deps({ number: 42 })).toThrow('There is no open issue #42 on project 1.');
   });
 
   it('refuses dependencies on itself, on closed and on unknown issues', () => {
     expect(() => deps({ dependsOn: [4] })).toThrow("#4 can't depend on itself.");
     expect(() => deps({ dependsOn: [9] })).toThrow("#9 is closed, so there's nothing to wait for.");
-    expect(() => deps({ dependsOn: [42] })).toThrow('There is no open issue #42 on floor 1.');
+    expect(() => deps({ dependsOn: [42] })).toThrow('There is no open issue #42 on project 1.');
   });
 
   it('refuses a cycle', () => {
@@ -223,8 +223,8 @@ describe('planDependencies (set_dependencies)', () => {
 
 describe('planning guidance', () => {
   const system = ceoSystemPrompt({ name: 'Luna', company: 'Acme', manager: 'Sam', notesFile: 'notes.md', sessionLimit: 0, maxAgents: 10, scaling: 'approve' });
-  const floor = { floor: 2, fullName: 'acme/app', clone: '/clones/app', mission: 'Add voice messages', backlog: 0 };
-  const plan = ceoJobPrompt({ kind: 'plan', repoId: 'r1', at: 0 }, floor);
+  const project = { number: 2, fullName: 'acme/app', clone: '/clones/app', mission: 'Add voice messages', backlog: 0 };
+  const plan = ceoJobPrompt({ kind: 'plan', repoId: 'r1', at: 0 }, project);
   const review = ceoJobPrompt({ kind: 'review', at: 0 }, null);
 
   it('plans whole features, not slices per developer', () => {
@@ -258,20 +258,20 @@ describe('planning guidance', () => {
 describe('team guidance', () => {
   const prompt = (scaling: 'approve' | 'auto') => ceoSystemPrompt({ name: 'Luna', company: 'Acme', manager: 'Sam', notesFile: 'notes.md', sessionLimit: 0, maxAgents: 8, scaling });
 
-  it('sizes teams from throughput, within the floor max, and keeps one agent', () => {
-    expect(prompt('approve')).toContain("Size each floor's team from its throughput");
-    expect(prompt('approve')).toContain('A floor holds at most 8.');
-    expect(prompt('approve')).toContain('Every floor keeps at least one agent.');
+  it('sizes teams from throughput, within the project max, and keeps one agent', () => {
+    expect(prompt('approve')).toContain("Size each project's team from its throughput");
+    expect(prompt('approve')).toContain('A project holds at most 8.');
+    expect(prompt('approve')).toContain('Every project keeps at least one agent.');
     for (const old of ['QA tester', 'job description', 'specialty', 'propose_hire', 'update_job']) expect(prompt('approve')).not.toContain(old);
   });
 
   it('says who decides on team changes', () => {
     expect(prompt('approve')).toContain('The manager approves every change, and sets up each new agent before hiring them.');
-    expect(prompt('auto')).toContain("Team changes apply straight away, within the floor's max, so be deliberate.");
+    expect(prompt('auto')).toContain("Team changes apply straight away, within the project's max, so be deliberate.");
   });
 
   it('onboarding sizes the team instead of hiring specialists', () => {
-    const onboard = ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, { floor: 2, fullName: 'acme/app', clone: '/clones/app', mission: '', backlog: 3 });
+    const onboard = ceoJobPrompt({ kind: 'onboard', repoId: 'r1', at: 0 }, { number: 2, fullName: 'acme/app', clone: '/clones/app', mission: '', backlog: 3 });
     expect(onboard).toContain('scale_team');
     expect(onboard).not.toContain('update_job');
   });
@@ -279,7 +279,7 @@ describe('team guidance', () => {
 
 describe('triage', () => {
   const system = ceoSystemPrompt({ name: 'Luna', company: 'Acme', manager: 'Sam', notesFile: 'notes.md', sessionLimit: 0, maxAgents: 10, scaling: 'approve' });
-  const floor = { floor: 2, fullName: 'acme/app', clone: '/clones/app', mission: '', backlog: 3 };
+  const project = { number: 2, fullName: 'acme/app', clone: '/clones/app', mission: '', backlog: 3 };
   const job: CeoJob = { kind: 'triage', repoId: 'r1', prNumber: 108, at: 0 };
   const pr = {
     number: 108,
@@ -299,7 +299,7 @@ describe('triage', () => {
   };
 
   it('gives the job everything QA and GitHub know about the PR', () => {
-    const prompt = ceoJobPrompt(job, floor, pr);
+    const prompt = ceoJobPrompt(job, project, pr);
     for (const fact of ['#108', 'Jukebox volume', 'QA round 3', pr.summary, pr.fixInstructions, pr.mergeNote, pr.why, 'GitHub checks: failing (failed: CI / e2e)', 'mergeable: CONFLICTING (DIRTY)', 'triage 1 of 2']) {
       expect(prompt).toContain(fact);
     }
@@ -307,7 +307,7 @@ describe('triage', () => {
   });
 
   it('has nothing to do once the PR is no longer stuck', () => {
-    expect(ceoJobPrompt(job, floor, null)).toBe('Pull request #108 no longer needs triage. Reply "Nothing to do."');
+    expect(ceoJobPrompt(job, project, null)).toBe('Pull request #108 no longer needs triage. Reply "Nothing to do."');
   });
 
   it('adds a triage section to the system prompt and keeps its safety rules', () => {
@@ -317,7 +317,7 @@ describe('triage', () => {
   });
 });
 
-describe('floorCapacity', () => {
+describe('projectCapacity', () => {
   // #1 ← #2 ← #3, and #5 waits for #4. #2 is already in progress.
   const issues = [
     { number: 1, body: 'Skeleton' },
@@ -336,16 +336,16 @@ describe('floorCapacity', () => {
     { prNumber: 16, status: 'queued' }, // a re-test round
     { prNumber: 20, status: 'queued' }, // closed since
   ];
-  const cap = floorCapacity({ issues, inProgress: (n) => n === 2, openPrs: [10, 11, 12, 13, 14, 15, 16], qa });
+  const cap = projectCapacity({ issues, inProgress: (n) => n === 2, openPrs: [10, 11, 12, 13, 14, 15, 16], qa });
 
   it('counts only issues not yet in progress as waiting on others', () => {
     expect(cap.issuesWaitingOnOthers).toBe(2); // #3 and #5; #2 is in progress
-    expect(floorCapacity({ issues, inProgress: () => false, openPrs: [], qa: [] }).issuesWaitingOnOthers).toBe(3);
+    expect(projectCapacity({ issues, inProgress: () => false, openPrs: [], qa: [] }).issuesWaitingOnOthers).toBe(3);
   });
 
   it('keeps the longest dependency chain', () => {
     expect(cap.longestDependencyChain).toBe(2);
-    expect(floorCapacity({ issues: [], inProgress: () => false, openPrs: [], qa: [] }).longestDependencyChain).toBe(0);
+    expect(projectCapacity({ issues: [], inProgress: () => false, openPrs: [], qa: [] }).longestDependencyChain).toBe(0);
   });
 
   it('counts open PRs queued for or in QA', () => {

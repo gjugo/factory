@@ -23,7 +23,7 @@ import { useRouteRepo } from '@/hooks/use-route-repo';
 import { links } from '@/lib/links';
 import { useCeoBadge, useStore } from '@/store';
 
-// The sidebar: the office's pages, then every project (a cubefarm floor) with its status and what waits on the manager.
+// The sidebar: the office's pages, then every project with its status and what waits on the manager.
 // Below md it is a sheet (shadcn's Sidebar does that itself) that closes once something in it is picked.
 
 const PAGES = [

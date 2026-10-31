@@ -4,14 +4,14 @@ import { closedPrs, expired, freeSlot, onScreen, pickEviction, prBranch, prKey, 
 const run = (pr: number, over: Partial<PrRunInfo> = {}): PrRunInfo => ({ key: prKey('o/r', pr), repoId: 'o/r', pr, slot: 1, active: true, viewedAt: 0, ...over });
 
 describe('PR preview slots, folders and ports', () => {
-  it('names a worktree and branch per slot, apart from the floor preview', () => {
+  it('names a worktree and branch per slot, apart from the project preview', () => {
     expect(prSlug(1)).toBe('preview-pr-1');
     expect(prBranch(2)).toBe('swarm-preview-pr-2');
     expect(prSlug(1)).not.toBe('preview');
     expect(prKey('o/r', 7)).toBe('o/r#7');
   });
 
-  it('gives each slot its own lane in the hundred above the floor previews', () => {
+  it('gives each slot its own lane in the hundred above the project previews', () => {
     const one = prPortCandidates(6700, 1);
     const two = prPortCandidates(6700, 2);
     expect(one.slice(0, 3)).toEqual([6801, 6803, 6805]);

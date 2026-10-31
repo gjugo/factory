@@ -27,7 +27,7 @@ export function repoChoices(list: GhRepoSummary[], connected: string[], q: strin
 
 /** What can be done with a folder: nothing (already a project), connect it (on GitHub) or publish it first. */
 export function folderAction(f: ProjectFolderView): 'added' | 'connect' | 'publish' {
-  if (f.floor != null) return 'added';
+  if (f.number != null) return 'added';
   return f.github ? 'connect' : 'publish';
 }
 

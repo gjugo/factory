@@ -35,9 +35,9 @@ describe('phrasesText', () => {
     expect(
       phrasesText([
         { transcript: 'hire a designer', final: true },
-        { transcript: ' for floor two', final: false },
+        { transcript: ' for project two', final: false },
       ]),
-    ).toEqual({ text: 'hire a designer for floor two', speaking: true });
+    ).toEqual({ text: 'hire a designer for project two', speaking: true });
   });
 
   it('is not speaking once every phrase has settled', () => {

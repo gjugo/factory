@@ -233,36 +233,36 @@ export function describeTool(cwd: string, name: string, input: Record<string, un
 }
 
 export function describeOfficeTool(action: string, input: Record<string, unknown>): string {
-  const floor = input.floor != null ? ` → floor ${input.floor}` : '';
+  const project = input.project != null ? ` → project ${input.project}` : '';
   switch (action) {
     case 'company_status':
       return '🏢 company_status';
     case 'agent_detail':
       return `🔎 agent_detail ${String(input.agent_id ?? '')}`;
-    case 'set_floor_profile':
-      return `🗂️ set_floor_profile${floor}${input.summary ? `: ${clip(String(input.summary), 90)}` : ''}`;
+    case 'set_project_profile':
+      return `🗂️ set_project_profile${project}${input.summary ? `: ${clip(String(input.summary), 90)}` : ''}`;
     case 'scale_team':
-      return `📈 scale_team floor ${String(input.floor ?? '?')} → ${String(input.size ?? '?')}${input.reason ? `: ${clip(String(input.reason), 90)}` : ''}`;
+      return `📈 scale_team project ${String(input.project ?? '?')} → ${String(input.size ?? '?')}${input.reason ? `: ${clip(String(input.reason), 90)}` : ''}`;
     case 'configure_agent': {
       const set = [input.cli, input.model, input.effort].filter((x) => typeof x === 'string' && x !== '');
       return `⚙️ configure_agent ${String(input.agent_id ?? '')}${set.length ? `: ${set.join(' · ')}` : ''}`;
     }
     case 'file_issue':
-      return `📝 file_issue "${clip(String(input.title ?? ''), 70)}"${floor}`;
+      return `📝 file_issue "${clip(String(input.title ?? ''), 70)}"${project}`;
     case 'set_dependencies':
-      return `🔗 set_dependencies #${String(input.number ?? '?')}${floor}${Array.isArray(input.depends_on) ? ` · depends on ${input.depends_on.map((n) => `#${n}`).join(', ') || 'nothing'}` : ''}`;
+      return `🔗 set_dependencies #${String(input.number ?? '?')}${project}${Array.isArray(input.depends_on) ? ` · depends on ${input.depends_on.map((n) => `#${n}`).join(', ') || 'nothing'}` : ''}`;
     case 'close_issue':
-      return `🗂️ close_issue #${String(input.number ?? '?')}${floor}`;
+      return `🗂️ close_issue #${String(input.number ?? '?')}${project}`;
     case 'retry_qa':
-      return `🔁 retry_qa PR #${String(input.pr ?? '?')}${floor}`;
+      return `🔁 retry_qa PR #${String(input.pr ?? '?')}${project}`;
     case 'send_back':
-      return `↩️ send_back PR #${String(input.pr ?? '?')}${floor}`;
+      return `↩️ send_back PR #${String(input.pr ?? '?')}${project}`;
     case 'rerun_checks':
-      return `🔄 rerun_checks PR #${String(input.pr ?? '?')}${floor}`;
+      return `🔄 rerun_checks PR #${String(input.pr ?? '?')}${project}`;
     case 'close_pull':
-      return `🗂️ close_pull PR #${String(input.pr ?? '?')}${floor}`;
+      return `🗂️ close_pull PR #${String(input.pr ?? '?')}${project}`;
     case 'escalate':
-      return `📣 escalate PR #${String(input.pr ?? '?')}${floor}${input.reason ? `: ${clip(String(input.reason), 90)}` : ''}`;
+      return `📣 escalate PR #${String(input.pr ?? '?')}${project}${input.reason ? `: ${clip(String(input.reason), 90)}` : ''}`;
   }
   return `🏢 ${action}(${clip(JSON.stringify(input), 120)})`;
 }

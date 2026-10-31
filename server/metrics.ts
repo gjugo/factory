@@ -1,5 +1,5 @@
 import { prStage } from '../shared/ops.ts';
-import type { AgentRole, AgentStatus, OpsAlarm, OpsFloor, OpsNumbers, OpsView, PullInfo, QaView } from '../shared/types.ts';
+import type { AgentRole, AgentStatus, OpsAlarm, OpsProject, OpsNumbers, OpsView, PullInfo, QaView } from '../shared/types.ts';
 
 // Mission control's numbers (#216): pure functions over the office's state now, plus a compact rolling history of
 // merges, QA verdicts, GitHub check runs and session costs. The history lives in the state file for a week; the
@@ -13,7 +13,7 @@ export const KEEP_MS = 7 * DAY_MS;
 export const ALARM_ERROR_MS = 10 * 60_000;
 const MAX_ENTRIES = 4000; // per list, however busy the week was
 
-/** A merged PR: when, its floor's repo, its number (0: the demo's made-up past) and issue → merge time (null: unknown). */
+/** A merged PR: when, its project's repo, its number (0: the demo's made-up past) and issue → merge time (null: unknown). */
 export type MergeEntry = [at: number, repo: string, pr: number, leadMs: number | null];
 /** A QA verdict: when, the repo, whether it passed, and how long the PR waited for an agent to test it (null: unknown). */
 export type QaEntry = [at: number, repo: string, pass: boolean, waitMs: number | null];
@@ -166,10 +166,10 @@ function flow(h: OpsHistory, mine: (repo: string) => boolean, now: number): Flow
   };
 }
 
-/** A floor as mission control sees it: what can start, who's on it, and its open PRs with their QA records. */
-export interface OpsFloorState {
+/** A project as mission control sees it: what can start, who's on it, and its open PRs with their QA records. */
+export interface OpsProjectState {
   repoId: string;
-  floor: number;
+  number: number;
   ready: number; // backlog issues that can start now
   agents: { id: string; name: string; role: AgentRole; task: string | null; status: AgentStatus; endedAt: number | null; lastError: string | null }[];
   prs: { number: number; qa: Pick<QaView, 'status' | 'ceoLooking' | 'updatedAt'> | null; why: string | null }[]; // open PRs
@@ -178,7 +178,7 @@ export interface OpsFloorState {
 const BUSY: AgentStatus[] = ['preparing', 'working'];
 
 /** The pipeline and the team as they are now. */
-function rightNow(f: OpsFloorState) {
+function rightNow(f: OpsProjectState) {
   const stages = f.prs.map((p) => prStage(p.qa));
   const count = (s: string) => stages.filter((x) => x === s).length;
   const people = f.agents.filter((a) => a.role !== 'ceo');
@@ -201,9 +201,9 @@ const firstLine = (s: string, max = 120) => {
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 };
 
-/** What on this floor needs the manager: PRs that need you, and agents in error for over ALARM_ERROR_MS. */
-export function floorAlarms(f: OpsFloorState, now: number): OpsAlarm[] {
-  const base = { repoId: f.repoId, floor: f.floor };
+/** What on this project needs the manager: PRs that need you, and agents in error for over ALARM_ERROR_MS. */
+export function projectAlarms(f: OpsProjectState, now: number): OpsAlarm[] {
+  const base = { repoId: f.repoId, project: f.number };
   const prs: OpsAlarm[] = f.prs
     .filter((p) => prStage(p.qa) === 'needsYou')
     .map((p) => ({ ...base, id: `pr:${f.repoId}#${p.number}`, kind: 'pr', prNumber: p.number, agentId: null, text: `PR #${p.number} needs you${p.why ? `: ${firstLine(p.why)}` : ''}`, since: p.qa!.updatedAt }));
@@ -213,10 +213,10 @@ export function floorAlarms(f: OpsFloorState, now: number): OpsAlarm[] {
   return [...prs, ...agents];
 }
 
-/** Mission control: every floor's numbers, the total (connected floors and the CEO) and the alarms, oldest first. */
-export function opsView(floors: OpsFloorState[], h: OpsHistory, now: number): OpsView {
-  const sorted = [...floors].sort((a, b) => a.floor - b.floor);
-  const rows: OpsFloor[] = sorted.map((f) => ({ repoId: f.repoId, floor: f.floor, ...rightNow(f), ...flow(h, (r) => r === f.repoId, now), alarms: floorAlarms(f, now).length }));
+/** Mission control: every project's numbers, the total (connected projects and the CEO) and the alarms, oldest first. */
+export function opsView(projects: OpsProjectState[], h: OpsHistory, now: number): OpsView {
+  const sorted = [...projects].sort((a, b) => a.number - b.number);
+  const rows: OpsProject[] = sorted.map((f) => ({ repoId: f.repoId, number: f.number, ...rightNow(f), ...flow(h, (r) => r === f.repoId, now), alarms: projectAlarms(f, now).length }));
   const connected = new Set(sorted.map((f) => f.repoId));
   const sum = (k: keyof ReturnType<typeof rightNow>) => rows.reduce((s, r) => s + r[k], 0);
   const total: OpsNumbers = {
@@ -233,9 +233,9 @@ export function opsView(floors: OpsFloorState[], h: OpsHistory, now: number): Op
     ...flow(h, (r) => connected.has(r) || r === '', now),
   };
   return {
-    floors: rows,
+    projects: rows,
     total,
     ceoCostToday: flow(h, (r) => r === '', now).costToday,
-    alarms: sorted.flatMap((f) => floorAlarms(f, now)).sort((a, b) => a.since - b.since),
+    alarms: sorted.flatMap((f) => projectAlarms(f, now)).sort((a, b) => a.since - b.since),
   };
 }

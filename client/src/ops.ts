@@ -1,4 +1,4 @@
-// Mission control in the office: how its numbers and Claude's usage read on the lobby wall, the floor signs, the HUD
+// Mission control in the office: how its numbers and Claude's usage read on the overview, the projects table, the HUD
 // chip and the manager's console, and which alarms are new (they sound). Pure, so it's tested without a browser.
 
 import type { OpsAlarm, OpsNumbers, OpsView, UsageView } from '../../shared/types';
@@ -27,7 +27,7 @@ export const EMPTY_NUMBERS: OpsNumbers = {
   costToday: 0,
 };
 
-export const EMPTY_OPS: OpsView = { floors: [], total: EMPTY_NUMBERS, ceoCostToday: 0, alarms: [] };
+export const EMPTY_OPS: OpsView = { projects: [], total: EMPTY_NUMBERS, ceoCostToday: 0, alarms: [] };
 
 /** "45s", "12m", "1h 42m", "2d 3h"; "—" when there's nothing to say. */
 export function fmtDuration(ms: number | null): string {
@@ -72,7 +72,7 @@ export function usageMeter(u: UsageView, now: number): { state: string; tone: 'g
 /** Alarms in `next` that weren't in `prev`: these sound. */
 export const newAlarms = (prev: OpsAlarm[], next: OpsAlarm[]) => next.filter((a) => !prev.some((p) => p.id === a.id));
 
-/** One floor's numbers, compact, for its wall sign: "🚀 3 today · ⏱ 1h 42m lead · ✅ CI 92% · 💵 ~$4.20". */
+/** One project's numbers, compact, for its row: "🚀 3 today · ⏱ 1h 42m lead · ✅ CI 92% · 💵 ~$4.20". */
 export function signLine(n: OpsNumbers): string {
   return `🚀 ${n.mergedToday} today · ⏱ ${fmtDuration(n.leadMs)} lead · ✅ CI ${fmtPct(n.ciPass)} · 💵 ~${fmtUsd(n.costToday)}`;
 }

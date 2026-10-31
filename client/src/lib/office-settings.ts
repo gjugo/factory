@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FLOOR_SEATS, type AgentCli, type EffortLevel, type SwarmSettings } from '../../../shared/types';
+import { PROJECT_SEATS, type AgentCli, type EffortLevel, type SwarmSettings } from '../../../shared/types';
 
 // The office settings form (/settings): its fields as typed (numbers stay strings until they validate), the limits the
 // server clamps to (server/swarm.ts updateSettings), and the PATCH that sends only what changed.
@@ -11,7 +11,7 @@ export const LIMITS = {
   managerName: 40,
   companyName: 60,
   sessionLimit: { min: 0, max: 999 },
-  maxAgents: { min: 1, max: FLOOR_SEATS },
+  maxAgents: { min: 1, max: PROJECT_SEATS },
   ceoHeartbeatMin: { min: 0, max: 1440 },
   pacingSessions: { min: 1, max: 32 },
   trimIdleDesksMin: { min: 0, max: 7 * 24 * 60 },

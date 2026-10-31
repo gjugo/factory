@@ -30,7 +30,7 @@ describe('desksToTrim', () => {
     expect(desksToTrim([desk(), desk({ key: 'bob', idleSince: 0 })], 0, NOW)).toEqual([]);
   });
 
-  it('picks only the due desks from a floor', () => {
+  it('picks only the due desks from a project', () => {
     const desks = [desk({ key: 'a' }), desk({ key: 'b', busy: true }), desk({ key: 'c', idleSince: NOW - MIN }), desk({ key: 'd', idleSince: NOW - 200 * MIN })];
     expect(desksToTrim(desks, 120, NOW)).toEqual(['a', 'd']);
   });

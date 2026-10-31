@@ -202,7 +202,7 @@ export class BoxMachines implements MachineProvider {
     return boxDeskDir(fullName);
   }
 
-  /** Fresh read-only copies of the floor's linked repos; their paths in the Box (never fails the task). */
+  /** Fresh read-only copies of the project's linked repos; their paths in the Box (never fails the task). */
   async linkRepos(machine: string, fullNames: string[], note?: (text: string) => void): Promise<string[]> {
     if (!fullNames.length) return [];
     const id = await this.ensure(machine);

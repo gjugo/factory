@@ -16,7 +16,7 @@ import { claimVoice } from './voice/claim';
 import { speakable } from './voice/voiceQueue';
 
 // The office as this tab knows it: the server's snapshot, then every ServerEvent folded in by apply(). cubefarm's
-// store without the 3D world: no floors to walk, sounds or presence poses, only state the pages read. CEO messages
+// store without the 3D world: no rooms to walk, sounds or presence poses, only state the pages read. CEO messages
 // are read aloud from here (voice/speaker.ts, loaded on the first one).
 
 export type Agent = Omit<AgentView, 'log'>;
@@ -59,8 +59,8 @@ interface State {
   cloud: CloudView; // Settings → Cloud agents: the Upstash account and what cloud agents sign in with (never a key)
   restarting: boolean; // the connection dropped because the office is restarting to update
 
-  // What this tab watches (watch.ts): the route's project floor, the agents pages have open, workers lists out.
-  floor: number;
+  // What this tab watches (watch.ts): the route's project number, the agents pages have open, workers lists out.
+  project: number;
   watched: Record<string, number>;
   workers: number;
   /** The CEO chat sheet is open. */
@@ -78,7 +78,7 @@ interface State {
   setConnected(v: boolean): void;
   setRestarting(v: boolean): void;
   setOfficeUpdate(u: OfficeUpdateView): void;
-  setFloor(floor: number): void;
+  setProject(project: number): void;
   /** Count agents in (+1) or out (-1) of the watch: useWatchAgents. */
   watchAgents(ids: readonly string[], by: 1 | -1): void;
   /** A workers list opened (+1) or closed (-1): useWorkersWatch. */
@@ -147,7 +147,7 @@ export const useStore = create<State>((set, get) => ({
   cloud: EMPTY_CLOUD,
   restarting: false,
 
-  floor: -1,
+  project: -1,
   watched: {},
   workers: 0,
   ceoOpen: false,
@@ -180,7 +180,7 @@ export const useStore = create<State>((set, get) => ({
           demo: d.demo,
           machinesRoot: d.machinesRoot,
           settings: d.settings,
-          repos: d.repos.sort((a, b) => a.floor - b.floor),
+          repos: d.repos.sort((a, b) => a.number - b.number),
           agents,
           logs,
           latest: {},
@@ -218,7 +218,7 @@ export const useStore = create<State>((set, get) => ({
           const next = { ...before, ...patch } as RepoView;
           repos = [...repos.filter((r) => r.id !== next.id), next];
         }
-        set({ repos: repos.sort((a, b) => a.floor - b.floor) });
+        set({ repos: repos.sort((a, b) => a.number - b.number) });
         break;
       }
       case 'repoRemoved':
@@ -363,8 +363,8 @@ export const useStore = create<State>((set, get) => ({
   setConnected: (connected) => set({ connected }),
   setRestarting: (restarting) => set({ restarting }),
   setOfficeUpdate: (officeUpdate) => set({ officeUpdate }),
-  setFloor: (floor) => {
-    if (floor !== get().floor) set({ floor });
+  setProject: (project) => {
+    if (project !== get().project) set({ project });
   },
   watchAgents: (ids, by) => set({ watched: countWatch(get().watched, ids, by) }),
   watchWorkers: (by) => set({ workers: Math.max(0, get().workers + by) }),
@@ -382,7 +382,7 @@ export const useStore = create<State>((set, get) => ({
 
 export const qaKey = (repoId: string, prNumber: number) => `${repoId}#${prNumber}`;
 
-export const repoOnFloor = (repos: RepoView[], floor: number) => repos.find((r) => r.floor === floor) ?? null;
+export const repoOnProject = (repos: RepoView[], project: number) => repos.find((r) => r.number === project) ?? null;
 
 export const agentsOnRepo = (agents: Record<string, Agent>, repoId: string) =>
   Object.values(agents)
@@ -488,7 +488,7 @@ export function kanbanFor(repo: RepoView, agents: Agent[], qaRecords: Record<str
   return { backlog, progress, qa, ready, merged };
 }
 
-export interface FloorPrCounts {
+export interface ProjectPrCounts {
   /** Open PRs in the Kanban's In QA column: queued, testing, failed, fixing, needs-human and untested ones. */
   inQa: number;
   /** Open PRs that passed QA (the Ready to merge column). */
@@ -501,8 +501,8 @@ export interface FloorPrCounts {
  * A project's PR counts, matching kanbanFor's columns. Only open PRs count: QA records outlive their PR's merge or
  * close, so counting records instead drifts further from the board with every merge.
  */
-export function floorPrCounts(repo: RepoView, qaRecords: Record<string, QaView>): FloorPrCounts {
-  const counts: FloorPrCounts = { inQa: 0, ready: 0, needsYou: 0 };
+export function projectPrCounts(repo: RepoView, qaRecords: Record<string, QaView>): ProjectPrCounts {
+  const counts: ProjectPrCounts = { inQa: 0, ready: 0, needsYou: 0 };
   for (const p of repo.pulls) {
     if (p.state !== 'OPEN') continue;
     const rec = qaRecords[qaKey(repo.id, p.number)];
@@ -519,7 +519,7 @@ export function floorPrCounts(repo: RepoView, qaRecords: Record<string, QaView>)
  */
 export function needsYouCount(repo: RepoView, qaRecords: Record<string, QaView>, ops: OpsView): number {
   const alarms = ops.alarms.filter((a) => a.repoId === repo.id).length;
-  return Math.max(alarms, floorPrCounts(repo, qaRecords).needsYou);
+  return Math.max(alarms, projectPrCounts(repo, qaRecords).needsYou);
 }
 
 /** Everything waiting on the manager across the office: alarms, else needs-human PRs, plus pending team changes. */

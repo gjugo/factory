@@ -7,16 +7,16 @@ import { SyncProxies } from './syncProxy.ts';
 import { previewEnvTooBig } from '../shared/previewEnv.ts';
 import type { PreviewConfig, PreviewStatus, PreviewView, PrPreviewView, PullInfo } from '../shared/types.ts';
 
-// One preview per floor: the floor's app, run from its own worktree on a port reserved for the floor. Beside them, the
+// One preview per project: the project's app, run from its own worktree on a port reserved for the project. Beside them, the
 // PR theatre: up to MAX_PR_PREVIEWS open PRs at once, each from a slot worktree of its own on its slot's ports.
 // Only the config is persisted; after a restart every preview reads 'stopped' and the PR previews are gone.
 
-/** What the previews need to know about a floor. */
-export interface PreviewFloor {
+/** What the previews need to know about a project. */
+export interface PreviewProject {
   id: string;
   fullName: string;
   defaultBranch: string;
-  floor: number;
+  number: number;
   preview: PreviewConfig;
 }
 
@@ -33,7 +33,7 @@ interface Run {
   gen: number; // bumped by every start / stop; callbacks from older runs are ignored
 }
 
-/** A PR preview: which floor and slot it runs in, and when a viewer last had it on screen. */
+/** A PR preview: which project and slot it runs in, and when a viewer last had it on screen. */
 interface PrRun extends Run {
   repoId: string;
   fullName: string;
@@ -88,7 +88,7 @@ export class Previews {
   private watches = new Map<string, { key: string | null; at: number }>(); // viewer id -> the PR preview on its screen
   private shown = new Set<string>(); // the PR previews the clients were last told are on screen
   private cleaning = new Map<string, Promise<void>>(); // deskKey -> a PR preview's stop and worktree removal
-  private hasDefault = new Map<string, boolean>(); // floor id -> package.json in its checkout
+  private hasDefault = new Map<string, boolean>(); // project id -> package.json in its checkout
   private emitTimers = new Map<string, NodeJS.Timeout>();
   private sync = new SyncProxies();
 
@@ -118,17 +118,17 @@ export class Previews {
     return new Set([...this.runs.values(), ...this.prRuns.values()].filter((r) => r !== except && r.port && ACTIVE.includes(r.status)).map((r) => r.port!));
   }
 
-  /** The floor's reserved port: 6700 (SWARM_PREVIEW_PORT) + floor, moved up by 100 while it clashes with the office or another preview. */
-  portFor(f: PreviewFloor): number {
+  /** The project's reserved port: 6700 (SWARM_PREVIEW_PORT) + project, moved up by 100 while it clashes with the office or another preview. */
+  portFor(f: PreviewProject): number {
     const active = this.runs.get(f.id);
     if (active?.port && ACTIVE.includes(active.status)) return active.port;
     const taken = this.takenPorts(active);
-    let p = PREVIEW_PORT + f.floor;
+    let p = PREVIEW_PORT + f.number;
     while (forbidden(p) || taken.has(p)) p += 100;
     return p;
   }
 
-  view(f: PreviewFloor): PreviewView {
+  view(f: PreviewProject): PreviewView {
     const r = this.runs.get(f.id);
     let status: PreviewStatus = r?.status ?? 'stopped';
     if (status === 'stopped' && !f.preview.command && this.hasDefault.get(f.id) === false) status = 'unconfigured';
@@ -146,21 +146,21 @@ export class Previews {
     };
   }
 
-  /** The floor's preview is being set up or running: its worktree is in use. */
-  active(f: PreviewFloor): boolean {
+  /** The project's preview is being set up or running: its worktree is in use. */
+  active(f: PreviewProject): boolean {
     return ACTIVE.includes(this.runs.get(f.id)?.status ?? 'stopped');
   }
 
-  /** Re-check whether a floor without a command has a package.json to fall back on. */
-  async refreshDefault(f: PreviewFloor) {
+  /** Re-check whether a project without a command has a package.json to fall back on. */
+  async refreshDefault(f: PreviewProject) {
     const has = await this.backend.previews.hasDefault(f.fullName).catch(() => true);
     if (this.hasDefault.get(f.id) === has) return;
     this.hasDefault.set(f.id, has);
     this.hooks.emit(f.id);
   }
 
-  /** Start the floor's preview on the default branch or an open PR, replacing whatever it is running now. */
-  async start(f: PreviewFloor, title: string, pr?: number | null): Promise<PreviewView> {
+  /** Start the project's preview on the default branch or an open PR, replacing whatever it is running now. */
+  async start(f: PreviewProject, title: string, pr?: number | null): Promise<PreviewView> {
     if (pr !== undefined && pr !== null && (!Number.isInteger(pr) || pr <= 0)) throw new HttpError(400, `Invalid pull request number: ${pr}`);
     if (pr) await this.checkOpen(f, pr);
     const r = this.run(f.id);
@@ -189,8 +189,8 @@ export class Previews {
     return this.view(f);
   }
 
-  /** Stop the floor's preview and free its port. */
-  async stop(f: PreviewFloor): Promise<PreviewView> {
+  /** Stop the project's preview and free its port. */
+  async stop(f: PreviewProject): Promise<PreviewView> {
     const r = this.run(f.id);
     r.gen++;
     await this.halt(f.fullName, r, PREVIEW_SLUG);
@@ -199,9 +199,9 @@ export class Previews {
     return this.view(f);
   }
 
-  /** The floor is leaving the building: stop its previews and remove their worktrees. */
-  async remove(f: PreviewFloor) {
-    const main = this.backend.mainDir(f.fullName); // now: the floor points away from its folder before the preview stops
+  /** The project is leaving the office: stop its previews and remove their worktrees. */
+  async remove(f: PreviewProject) {
+    const main = this.backend.mainDir(f.fullName); // now: the project points away from its folder before the preview stops
     const r = this.runs.get(f.id);
     if (r) {
       r.gen++;
@@ -215,10 +215,10 @@ export class Previews {
   }
 
   /** Server shutdown: stop every preview, and clear the PR previews' worktrees away (what's left goes at the next start). */
-  async stopAll(floors: PreviewFloor[]) {
+  async stopAll(projects: PreviewProject[]) {
     const prs = Promise.all([...this.prRuns.values()].map((r) => this.endPr(r)));
     await Promise.all([
-      ...floors.map((f) => {
+      ...projects.map((f) => {
         const r = this.runs.get(f.id);
         if (!r) return;
         r.gen++;
@@ -233,10 +233,10 @@ export class Previews {
    * Server start: nothing is running yet, so anything alive in a preview worktree or on a preview port is an orphan,
    * and a PR preview's worktree is left over from a hard stop.
    */
-  async clearOrphans(floors: PreviewFloor[]) {
+  async clearOrphans(projects: PreviewProject[]) {
     const slots = Array.from({ length: MAX_PR_PREVIEWS }, (_, i) => i + 1);
     await Promise.all(
-      floors.flatMap((f) => [
+      projects.flatMap((f) => [
         this.backend.releaseDesk(f.fullName, PREVIEW_SLUG, this.portFor(f)).catch(() => undefined),
         ...slots.map(async (slot) => {
           await this.backend.releaseDesk(f.fullName, prSlug(slot), prPortCandidates(PREVIEW_PORT, slot)[0]).catch(() => undefined);
@@ -252,16 +252,16 @@ export class Previews {
     return [...this.prRuns.values()].map((r) => this.prView(r));
   }
 
-  /** The worktrees this floor's PR previews are using, for the desk sweep to keep. */
-  prSlugs(f: PreviewFloor): string[] {
+  /** The worktrees this project's PR previews are using, for the desk sweep to keep. */
+  prSlugs(f: PreviewProject): string[] {
     return [...this.prRuns.values()].filter((r) => r.repoId === f.id).map((r) => prSlug(r.slot));
   }
 
   /**
-   * Run an open PR's head beside the floor's main preview. One that's already up is kept (restart: run it again from
+   * Run an open PR's head beside the project's main preview. One that's already up is kept (restart: run it again from
    * the PR's latest head). With every slot taken, the one nobody has watched the longest stops first.
    */
-  async startPr(f: PreviewFloor, pr: number, title: string, restart = false): Promise<PrPreviewView> {
+  async startPr(f: PreviewProject, pr: number, title: string, restart = false): Promise<PrPreviewView> {
     if (!Number.isInteger(pr) || pr <= 0) throw new HttpError(400, `Invalid pull request number: ${pr}`);
     await this.checkOpen(f, pr);
     const key = prKey(f.id, pr);
@@ -302,7 +302,7 @@ export class Previews {
   }
 
   /** Stop a PR preview and clear its worktree away. */
-  async stopPr(f: PreviewFloor, pr: number) {
+  async stopPr(f: PreviewProject, pr: number) {
     const r = this.prRuns.get(prKey(f.id, pr));
     if (r) await this.endPr(r);
   }
@@ -328,8 +328,8 @@ export class Previews {
     this.tellScreen();
   }
 
-  /** The floor's PRs as the office knows them now: previews of PRs that merged or closed stop. */
-  pullsChanged(f: PreviewFloor, pulls: Pick<PullInfo, 'number' | 'state'>[]) {
+  /** The project's PRs as the office knows them now: previews of PRs that merged or closed stop. */
+  pullsChanged(f: PreviewProject, pulls: Pick<PullInfo, 'number' | 'state'>[]) {
     for (const key of closedPrs(this.prInfos(), f.id, pulls)) {
       const r = this.prRuns.get(key)!;
       const state = pulls.find((p) => p.number === r.pr)?.state;
@@ -338,10 +338,10 @@ export class Previews {
     }
   }
 
-  /** A sync proxy (compare mode's synced scrolling) in front of the floor's running app (pr null) or a running PR preview. */
-  async syncUrl(f: PreviewFloor, pr: number | null): Promise<string> {
+  /** A sync proxy (compare mode's synced scrolling) in front of the project's running app (pr null) or a running PR preview. */
+  async syncUrl(f: PreviewProject, pr: number | null): Promise<string> {
     const r = pr ? this.prRuns.get(prKey(f.id, pr)) : this.runs.get(f.id);
-    if (!r?.port || r.status !== 'running') throw new HttpError(409, `${pr ? `PR #${pr}'s preview` : "The floor's app"} isn't running`);
+    if (!r?.port || r.status !== 'running') throw new HttpError(409, `${pr ? `PR #${pr}'s preview` : "The project's app"} isn't running`);
     return `http://localhost:${await this.sync.open(r.port)}`;
   }
 
@@ -387,14 +387,14 @@ export class Previews {
   }
 
   /** A slot for a new PR preview, stopping the one nobody has watched the longest when they're all taken. */
-  private makeRoom(f: PreviewFloor): number {
+  private makeRoom(f: PreviewProject): number {
     const free = freeSlot([...this.prRuns.values()]);
     if (free) return free;
     const key = pickEviction(this.prInfos(), this.screen());
     if (!key) throw new HttpError(409, `${MAX_PR_PREVIEWS} PR previews are on screen already, the most that run at once. Close one of them first.`);
     const old = this.prRuns.get(key)!;
     this.hooks.note(`PR #${old.pr}'s preview stopped to make room: at most ${MAX_PR_PREVIEWS} PR previews run at once.`);
-    // The same floor takes its worktree over as it is (so the install can be skipped); another floor's is cleared away.
+    // The same project takes its worktree over as it is (so the install can be skipped); another project's is cleared away.
     void this.endPr(old, undefined, old.repoId !== f.id);
     return old.slot;
   }
@@ -415,7 +415,7 @@ export class Previews {
     });
   }
 
-  /** Run `work` on a floor's slot after whatever is already clearing it; a new PR preview in that slot waits for both. */
+  /** Run `work` on a project's slot after whatever is already clearing it; a new PR preview in that slot waits for both. */
   private clean(repoId: string, slot: number, work: () => Promise<unknown>): Promise<void> {
     const k = deskKey(repoId, slot);
     const p = (this.cleaning.get(k) ?? Promise.resolve()).then(work).then(
@@ -441,7 +441,7 @@ export class Previews {
 
   // ---------- running a preview ----------
 
-  private job(f: PreviewFloor, pr: number | null, port: number, title: string): Omit<PreviewJob, 'slug' | 'branch'> {
+  private job(f: PreviewProject, pr: number | null, port: number, title: string): Omit<PreviewJob, 'slug' | 'branch'> {
     return { fullName: f.fullName, defaultBranch: f.defaultBranch, pr, port, command: f.preview.command, env: { ...f.preview.env }, title };
   }
 
@@ -489,7 +489,7 @@ export class Previews {
     for (let i = 0; i < 20 && (await portOpen(r.port)); i++) await new Promise((res) => setTimeout(res, 250));
   }
 
-  private async checkOpen(f: PreviewFloor, pr: number) {
+  private async checkOpen(f: PreviewProject, pr: number) {
     const known = this.hooks.pulls(f.id).find((p) => p.number === pr);
     const state = known?.state ?? (await this.backend.prDetails(f.fullName, pr).then((d) => d.state).catch(() => null));
     if (!state) throw new HttpError(404, `${f.fullName} has no pull request #${pr}`);

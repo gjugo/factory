@@ -74,7 +74,7 @@ function repo(pulls: PullInfo[]): RepoView {
     description: '',
     url: '',
     defaultBranch: 'main',
-    floor: 1,
+    number: 1,
     color: '#ff0000',
     autoAssign: true,
     autoMerge: true,

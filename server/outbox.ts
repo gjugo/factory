@@ -3,9 +3,9 @@ import { catchUp, latestListed, NO_WATCH, parseWatch, sameWatch, seesAll, type W
 
 // What the office sends its tabs over /ws, made to scale (#228). Most events go out as they happen, but those that come
 // many times a second with a big company are batched on one short tick: agents' changes (their tool, their activity)
-// and floors' (every sync and merge resends a floor's issues and PRs) go out as patches of just the fields that
+// and projects' (every sync and merge resends a project's issues and PRs) go out as patches of just the fields that
 // changed, and terminal lines go only to the tabs that show them (shared/watch.ts): every line for agents on the tab's
-// floor or with their panel open, the latest one for the workers list, nothing otherwise.
+// project or with their panel open, the latest one for the workers list, nothing otherwise.
 
 export type Agent = Omit<AgentView, 'log'>;
 
@@ -17,8 +17,8 @@ export interface Tab {
 }
 
 export interface OutboxHost {
-  /** Everyone in the office, with the floor their desk is on (0: the lobby; null: no floor). */
-  agents(): { id: string; floor: number | null }[];
+  /** Everyone in the office, with the project their desk is on (0: the CEO; null: no project). */
+  agents(): { id: string; project: number | null }[];
   /** An agent's terminal buffer, for catching a tab up. */
   log(agentId: string): readonly LogLine[];
   /** Just before a batch goes out, with the agents that have new lines (the office updates their activity signs). */
@@ -47,7 +47,7 @@ export function patchOf<T extends { id: string }>(sent: T | undefined, next: T):
 
 export const agentPatch = (sent: Agent | undefined, next: Agent): AgentPatch | null => patchOf(sent, next);
 
-/** Views of one kind (agents, floors): what every tab was last sent of each, and the newer ones waiting for the tick. */
+/** Views of one kind (agents, projects): what every tab was last sent of each, and the newer ones waiting for the tick. */
 class Patches<T extends { id: string }> {
   private sent = new Map<string, T>();
   private queued = new Map<string, T>();
@@ -145,7 +145,7 @@ export class Outbox {
     }
   }
 
-  /** Sends to every tab now. An agent or floor sent in full is remembered; a removed one forgotten. */
+  /** Sends to every tab now. An agent or project sent in full is remembered; a removed one forgotten. */
   broadcast(ev: ServerEvent) {
     if (ev.type === 'agent') this.agents.have(ev.agent);
     if (ev.type === 'repo') this.repos.have(ev.repo);
@@ -165,7 +165,7 @@ export class Outbox {
     this.soon();
   }
 
-  /** A floor changed (a sync, a merge, its settings): the change goes out with the next batch. */
+  /** A project changed (a sync, a merge, its settings): the change goes out with the next batch. */
   repo(view: RepoView) {
     this.repos.queue(view);
     this.soon();
@@ -194,14 +194,14 @@ export class Outbox {
     if (repos.length) this.broadcast({ type: 'repos', repos });
 
     if (!lines.size || !this.tabs.size) return;
-    const floors = new Map(this.host.agents().map((a) => [a.id, a.floor]));
+    const projects = new Map(this.host.agents().map((a) => [a.id, a.project]));
     for (const [tab, w] of this.tabs) {
       const tails: Record<string, LogLine[]> = {};
       const latest: Record<string, LogLine> = {};
       let anyTail = false;
       let anyLatest = false;
       for (const [id, batch] of lines) {
-        if (seesAll(w, id, floors.get(id) ?? null)) {
+        if (seesAll(w, id, projects.get(id) ?? null)) {
           tails[id] = batch;
           anyTail = true;
         } else if (w.workers) {

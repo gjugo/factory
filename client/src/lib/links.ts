@@ -1,4 +1,4 @@
-// Every URL in the dashboard, built in one place so pages never hand-write a path. A project is a cubefarm floor,
+// Every URL in the dashboard, built in one place so pages never hand-write a path. A project is
 // addressed by its GitHub owner/name; board cards open from the board's ?card= (issue-12, pr-34).
 
 export const links = {

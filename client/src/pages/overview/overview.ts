@@ -1,7 +1,7 @@
 // Mission control's derivations: a project's pipeline as bar segments, the projects table's sort, the 24 h merges
 // chart's points and its text alternative, the activity feed's filter. Pure, so they're tested without a browser.
 
-import type { OpsAlarm, OpsFloor, OpsNumbers, TickerItem } from '../../../../shared/types';
+import type { OpsAlarm, OpsProject, OpsNumbers, TickerItem } from '../../../../shared/types';
 import { links } from '../../lib/links';
 import type { Tone } from '@/lib/status';
 
@@ -65,30 +65,30 @@ export interface Sort {
   desc: boolean;
 }
 
-export interface FloorRow {
-  floor: OpsFloor;
+export interface ProjectRow {
+  project: OpsProject;
   name: string;
 }
 
-function sortValue(r: FloorRow, key: Exclude<SortKey, 'name'>): number | null {
+function sortValue(r: ProjectRow, key: Exclude<SortKey, 'name'>): number | null {
   switch (key) {
     case 'pipeline':
-      return pipelineTotal(r.floor);
+      return pipelineTotal(r.project);
     case 'mergedToday':
-      return r.floor.mergedToday;
+      return r.project.mergedToday;
     case 'lead':
-      return r.floor.leadMs;
+      return r.project.leadMs;
     case 'qaPass':
-      return r.floor.qaPass;
+      return r.project.qaPass;
     case 'team':
-      return r.floor.busy + r.floor.idle + r.floor.errors;
+      return r.project.busy + r.project.idle + r.project.errors;
     case 'alarms':
-      return r.floor.alarms;
+      return r.project.alarms;
   }
 }
 
-/** The projects table's rows in `sort`'s order; missing numbers ("—") go last either way, ties by floor. */
-export function sortFloors(rows: FloorRow[], sort: Sort): FloorRow[] {
+/** The projects table's rows in `sort`'s order; missing numbers ("—") go last either way, ties by project. */
+export function sortProjects(rows: ProjectRow[], sort: Sort): ProjectRow[] {
   const dir = sort.desc ? -1 : 1;
   return [...rows].sort((a, b) => {
     let c = 0;
@@ -99,7 +99,7 @@ export function sortFloors(rows: FloorRow[], sort: Sort): FloorRow[] {
       if (x === null || y === null) c = x === y ? 0 : x === null ? 1 : -1;
       else c = dir * (x - y);
     }
-    return c || a.floor.floor - b.floor.floor;
+    return c || a.project.number - b.project.number;
   });
 }
 

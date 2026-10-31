@@ -149,13 +149,13 @@ describe('the notifier', () => {
     const { n, posts, notes } = notifier(tmpDir(), () => 200, settings);
     await n.setWebhook('ntfy', SECRETS.ntfy);
     n.notify('merge', 'Merged PR #1', 'x'); // merges are off by default
-    n.notify('hire', 'A new agent waits for floor 1', 'Ada');
+    n.notify('hire', 'A new agent waits for project 1', 'Ada');
     await settle();
     expect(notes).toEqual([]);
-    expect(posts.map((p) => [p.channel, p.text])).toEqual([['ntfy', '📄 A new agent waits for floor 1\nAda']]);
+    expect(posts.map((p) => [p.channel, p.text])).toEqual([['ntfy', '📄 A new agent waits for project 1\nAda']]);
     const quiet = notifier(tmpDir(), () => 200, notifySettings(DEFAULT_NOTIFY, { channels: { ntfy: false } }));
     await quiet.n.setWebhook('ntfy', SECRETS.ntfy);
-    quiet.n.notify('hire', 'A new agent waits for floor 1', 'Ada');
+    quiet.n.notify('hire', 'A new agent waits for project 1', 'Ada');
     await settle();
     expect(quiet.posts).toEqual([]);
   });
@@ -167,14 +167,14 @@ describe('the notifier', () => {
     await n.subscribe(subscription('https://push.example.net/push/alive'));
     await n.subscribe(subscription('https://push.example.net/push/gone'));
     expect(n.channelsView().pushDevices).toBe(2);
-    n.notify('ceoMessage', 'Morgan', 'Floor 2 is done.');
+    n.notify('ceoMessage', 'Morgan', 'Project 2 is done.');
     await settle();
     expect(posts.map((p) => [p.channel, p.url])).toEqual([
       ['push', 'https://push.example.net/push/alive'],
       ['push', 'https://push.example.net/push/gone'],
     ]);
     expect(posts[0].headers).toMatchObject({ 'Content-Encoding': 'aes128gcm' });
-    expect(Buffer.isBuffer(posts[0].body) && posts[0].body.includes(Buffer.from('Floor 2'))).toBe(false); // encrypted
+    expect(Buffer.isBuffer(posts[0].body) && posts[0].body.includes(Buffer.from('Project 2'))).toBe(false); // encrypted
     expect(n.channelsView().pushDevices).toBe(1);
     // Kept on disk across a restart, with the same keys.
     const again = notifier(dir, () => 201).n;

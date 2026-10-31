@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ceoSystemPrompt } from './ceo.ts';
-import { agentPromptPreview, ceoPromptPreview, devBranch, devSystemPrompt, failedLogLines, noPushNudge, ONE_TURN, ownPrLine, PLACEHOLDERS, qaBranch, qaSystemPrompt, type PromptAgent, type PromptFloor } from './prompts.ts';
+import { agentPromptPreview, ceoPromptPreview, devBranch, devSystemPrompt, failedLogLines, noPushNudge, ONE_TURN, ownPrLine, PLACEHOLDERS, qaBranch, qaSystemPrompt, type PromptAgent, type PromptProject } from './prompts.ts';
 
-const repo = (o: Partial<PromptFloor> = {}): PromptFloor => ({
+const repo = (o: Partial<PromptProject> = {}): PromptProject => ({
   fullName: 'acme/shop',
   defaultBranch: 'main',
   autoMerge: true,
@@ -69,7 +69,7 @@ Workflow:
 5. Push: git push origin HEAD:swarm/issue-7-margaret
 6. Reply with a short summary of what you fixed.
 Rules: never push to the default branch, never force-push, never merge pull requests yourself (the office merges them once QA and the checks pass), and never edit files outside your worktree. If you cannot finish, open a draft PR (gh pr create --draft) explaining what is left and why.`,
-  qaFull: `You are Margaret, a software engineer on an autonomous agent team ("cubefarm"). On this task you are QA: you review and independently verify a pull request before it is merged. Your sign-off is the review: on this floor a PR you pass merges by itself as soon as GitHub's checks are green, so nobody else reads the code after you. Be thorough and skeptical, but fair: fail a PR only for real problems (broken behaviour, failing tests or build, the issue's requirements not met, obvious regressions), not for style preferences.
+  qaFull: `You are Margaret, a software engineer on an autonomous agent team ("cubefarm"). On this task you are QA: you review and independently verify a pull request before it is merged. Your sign-off is the review: on this project a PR you pass merges by itself as soon as GitHub's checks are green, so nobody else reads the code after you. Be thorough and skeptical, but fair: fail a PR only for real problems (broken behaviour, failing tests or build, the issue's requirements not met, obvious regressions), not for style preferences.
 
 Another session wrote this pull request, possibly yours from an earlier task: you don't remember it, so test it as an independent reviewer would, without assuming it works.
 

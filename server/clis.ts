@@ -149,7 +149,7 @@ export interface LaunchContext {
   /** Codex's hook program: forwards each hook to the office (notify.url). */
   codexHook: string;
   plugin: string; // file URL of the OpenCode plugin
-  /** The Playwright MCP server, when the floor tests in a browser. Claude Code gets it through its MCP config file. */
+  /** The Playwright MCP server, when the project tests in a browser. Claude Code gets it through its MCP config file. */
   browser: { command: string; args: string[] } | null;
   /** The node that runs the office's helper scripts where the CLI runs (default: the office's own). */
   node?: string;

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { STATE_FILE } from './config.ts';
+import { PREVIEW_PORT, STATE_FILE } from './config.ts';
 import { createDemoBackend } from './demo.ts';
 import { Swarm } from './swarm.ts';
 
@@ -66,5 +66,46 @@ describe('a state file from before the office life was removed', () => {
     const settings = swarm.updateSettings(patch as never);
     expect(settings.managerName).toBe('Alex');
     for (const k of ['dogName', 'themes', 'weather', 'worldEvents']) expect(settings).not.toHaveProperty(k);
+  });
+});
+
+// Floors became projects (#26): an office whose state file says `floor` keeps every project at its number, so its
+// preview keeps its port, with its team, settings and history.
+describe('a state file from before floors were called projects', () => {
+  it('boots with every project at its number and preview port, its team, settings and history, and saves `number`', async () => {
+    const first = new Swarm(createDemoBackend());
+    await first.connectRepo('demo-co/weather-api', { mission: 'Forecasts for every city' });
+    await first.connectRepo('demo-co/pixel-todo');
+    first.updateSettings({ managerName: 'Sam', maxAgents: 7, scaling: 'auto' });
+    await (first as unknown as Internals).writeState();
+
+    const old = await readState();
+    // the old shape, and numbers the office wouldn't hand out today: they must be kept, not recomputed
+    for (const [i, r] of old.repos.entries()) {
+      delete r.number;
+      r.floor = i === 0 ? 2 : 1;
+    }
+    old.messages = [{ id: 7, from: 'ceo', text: 'Floor 2 looks healthy.', at: 1 }];
+    await fs.writeFile(STATE_FILE, JSON.stringify(old));
+
+    const again = new Swarm(createDemoBackend());
+    await again.init();
+    const snap = again.snapshot();
+    const number = (id: string) => snap.repos.find((r) => r.id === id)?.number;
+    expect(number('demo-co/weather-api')).toBe(2);
+    expect(number('demo-co/pixel-todo')).toBe(1);
+    for (const r of snap.repos) {
+      expect(r.preview.port).toBe(PREVIEW_PORT + r.number);
+      expect(r).not.toHaveProperty('floor');
+    }
+    expect(snap.repos.find((r) => r.id === 'demo-co/weather-api')?.mission).toBe('Forecasts for every city');
+    for (const a of old.agents) expect(snap.agents.find((x) => x.id === a.id)?.repoId).toBe(a.repoId);
+    expect(snap.settings).toMatchObject({ managerName: 'Sam', maxAgents: 7, scaling: 'auto' });
+    expect(snap.messages.map((m) => m.id)).toEqual([7]);
+
+    await (again as unknown as Internals).writeState();
+    const saved = await readState();
+    expect(saved.repos.map((r: { id: string; number: number }) => [r.id, r.number])).toEqual(old.repos.map((r: { id: string; floor: number }) => [r.id, r.floor]));
+    for (const r of saved.repos) expect(r).not.toHaveProperty('floor');
   });
 });

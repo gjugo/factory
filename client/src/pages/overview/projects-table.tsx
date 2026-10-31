@@ -11,10 +11,10 @@ import { links } from '@/lib/links';
 import { cn } from '@/lib/utils';
 import { fmtDuration, fmtPct } from '@/ops';
 import { useStore } from '@/store';
-import { nextSort, sortFloors, type FloorRow, type Sort, type SortKey } from './overview';
+import { nextSort, sortProjects, type ProjectRow, type Sort, type SortKey } from './overview';
 import { PipelineBar } from './pipeline-bar';
 
-// Every project's numbers from ops.floors, sortable; a row opens the project's board. It scrolls inside its card.
+// Every project's numbers from ops.projects, sortable; a row opens the project's board. It scrolls inside its card.
 
 const COLUMNS: { key: SortKey; label: string; hint?: string; numeric?: boolean }[] = [
   { key: 'name', label: 'Project' },
@@ -40,17 +40,17 @@ function SortHead({ col, sort, onSort }: { col: (typeof COLUMNS)[number]; sort: 
 }
 
 export function ProjectsTable() {
-  const floors = useStore((s) => s.ops.floors);
+  const projects = useStore((s) => s.ops.projects);
   const repos = useStore((s) => s.repos);
   const navigate = useNavigate();
   const [sort, setSort] = useState<Sort>({ key: 'name', desc: false });
   const rows = useMemo(() => {
-    const named: FloorRow[] = floors.map((floor) => {
-      const repo = repos.find((r) => r.id === floor.repoId);
-      return { floor, name: repo ? projectName(repo) : floor.repoId };
+    const named: ProjectRow[] = projects.map((project) => {
+      const repo = repos.find((r) => r.id === project.repoId);
+      return { project, name: repo ? projectName(repo) : project.repoId };
     });
-    return sortFloors(named, sort);
-  }, [floors, repos, sort]);
+    return sortProjects(named, sort);
+  }, [projects, repos, sort]);
 
   return (
     <Card className="gap-3 pb-0">
@@ -85,7 +85,7 @@ export function ProjectsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map(({ floor: f, name }) => (
+                {rows.map(({ project: f, name }) => (
                   <TableRow key={f.repoId} className="cursor-pointer" onClick={() => navigate(links.board(f.repoId))}>
                     <TableCell className="max-w-56 pl-4">
                       <Link
@@ -93,8 +93,8 @@ export function ProjectsTable() {
                         className="flex min-w-0 items-center gap-2 rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[11px] text-muted-foreground tabular-nums" title={`Floor ${f.floor}`}>
-                          {f.floor}
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[11px] text-muted-foreground tabular-nums" title={`Project ${f.number}`}>
+                          {f.number}
                         </span>
                         <span className="truncate">{name}</span>
                       </Link>

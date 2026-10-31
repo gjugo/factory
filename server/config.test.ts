@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultProjectsDir, demoScale, envMinutes, envPort, isLoopback, localAddress, networkUrls } from './config.ts';
+import { defaultProjectsDir, demoScale, demoScaleNote, envMinutes, envPort, isLoopback, localAddress, networkUrls } from './config.ts';
 
 let tmp: string;
 beforeEach(() => {
@@ -65,16 +65,26 @@ describe('listen address', () => {
 });
 
 describe('demoScale', () => {
-  it('is the usual demo without --floors or --agents', () => {
+  it('is the usual demo without --projects or --agents', () => {
     expect(demoScale(['node', 'server/index.ts', '--demo'], {})).toBeNull();
   });
 
-  it('reads the big company from the command line or the environment, within what a building holds', () => {
-    expect(demoScale(['--demo', '--floors', '10', '--agents', '15'], {})).toEqual({ floors: 10, agents: 15 });
-    expect(demoScale(['--floors=3'], {})).toEqual({ floors: 3, agents: 6 });
-    expect(demoScale([], { SWARM_DEMO_FLOORS: '4', SWARM_DEMO_AGENTS: '9' })).toEqual({ floors: 4, agents: 9 });
-    expect(demoScale(['--floors', '99', '--agents', '40'], {})).toEqual({ floors: 20, agents: 15 });
-    expect(demoScale(['--agents', '0'], {})).toEqual({ floors: 2, agents: 1 });
+  it('reads the big company from the command line or the environment, within what the office holds', () => {
+    expect(demoScale(['--demo', '--projects', '10', '--agents', '15'], {})).toEqual({ projects: 10, agents: 15 });
+    expect(demoScale(['--projects=3'], {})).toEqual({ projects: 3, agents: 6 });
+    expect(demoScale([], { SWARM_DEMO_PROJECTS: '4', SWARM_DEMO_AGENTS: '9' })).toEqual({ projects: 4, agents: 9 });
+    expect(demoScale(['--projects', '99', '--agents', '40'], {})).toEqual({ projects: 20, agents: 15 });
+    expect(demoScale(['--agents', '0'], {})).toEqual({ projects: 2, agents: 1 });
+  });
+
+  it('still takes --floors and SWARM_DEMO_FLOORS, the old names, and says they are deprecated', () => {
+    expect(demoScale(['--demo', '--floors', '10', '--agents', '15'], {})).toEqual({ projects: 10, agents: 15 });
+    expect(demoScale(['--floors=3'], {})).toEqual({ projects: 3, agents: 6 });
+    expect(demoScale([], { SWARM_DEMO_FLOORS: '4' })).toEqual({ projects: 4, agents: 6 });
+    expect(demoScale(['--projects', '5', '--floors', '9'], {})).toEqual({ projects: 5, agents: 6 });
+    expect(demoScaleNote(['--floors', '10'], {})).toBe('--floors is deprecated: use --projects.');
+    expect(demoScaleNote([], { SWARM_DEMO_FLOORS: '4' })).toBe('SWARM_DEMO_FLOORS is deprecated: use SWARM_DEMO_PROJECTS.');
+    expect(demoScaleNote(['--projects', '10'], { SWARM_DEMO_PROJECTS: '4' })).toBeNull();
   });
 });
 

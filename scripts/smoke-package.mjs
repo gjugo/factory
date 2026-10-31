@@ -46,7 +46,7 @@ try {
   if (!state || !Array.isArray(state.repos)) throw new Error('the office never answered /api/state');
   const page = await fetch(`http://127.0.0.1:${PORT}/`).then((r) => r.text());
   if (!page.includes('<title>factory</title>')) throw new Error('the office does not serve the client');
-  console.log(`demo office up: ${state.repos.length} floors, ${state.agents.length} agents, client served`);
+  console.log(`demo office up: ${state.repos.length} projects, ${state.agents.length} agents, client served`);
 } finally {
   server?.kill();
   // Windows keeps the folder locked until the office has exited.

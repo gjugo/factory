@@ -1,6 +1,6 @@
-// The floors' activity tickers: one short line per thing that happened on a floor ("Ken opened PR #212", "CI red on
+// The projects' activity tickers: one short line per thing that happened on a project ("Ken opened PR #212", "CI red on
 // #198", "#204 merged 🎉"), worked out by comparing each agent, QA and repo update the office broadcasts with the one
-// before it. Kept in memory, the last few per floor: a restart starts a fresh tape.
+// before it. Kept in memory, the last few per project: a restart starts a fresh tape.
 
 import { clipText, redact } from '../shared/activity.ts';
 import type { AgentView, PullInfo, QaStatus, QaView, RepoView, ServerEvent, TickerItem } from '../shared/types.ts';
@@ -20,7 +20,7 @@ export interface RepoFacts {
   issues: Set<number>;
 }
 
-/** Lines kept per floor. */
+/** Lines kept per project. */
 export const TICKER_KEEP = 20;
 const MERGED_NEWS_MS = 10 * 60_000; // a merge first seen this long after it happened is old news
 const MAX_NEW_ISSUES = 3; // a batch of filed issues: this many lines, then "+n more"
@@ -78,7 +78,7 @@ export function repoFacts(repo: RepoView): RepoFacts {
   return { pulls: new Map(repo.pulls.map((p) => [p.number, { state: p.state, checks: p.checks }])), issues: new Set(repo.issues.map((i) => i.number)) };
 }
 
-/** PRs opened, merged or closed, CI turning red or green, and issues filed or closed, since the floor's last sync. */
+/** PRs opened, merged or closed, CI turning red or green, and issues filed or closed, since the project's last sync. */
 export function repoTicks(prev: RepoFacts, next: RepoView, authorOf: (pr: number) => string | null, now = Date.now()): Tick[] {
   const out: Tick[] = [];
   const say = (text: string, tone: Tick['tone'] = 'info', key?: string) => out.push({ repoId: next.id, text, tone, key });
@@ -120,7 +120,7 @@ export interface TickerLookups {
   author(repoId: string, pr: number): string | null;
 }
 
-/** Watches what the office broadcasts and keeps each floor's recent lines. */
+/** Watches what the office broadcasts and keeps each project's recent lines. */
 export class Ticker {
   private items: TickerItem[] = [];
   private seq = 1;
@@ -181,7 +181,7 @@ export class Ticker {
     return added;
   }
 
-  /** Every floor's kept lines, oldest first (for the snapshot). */
+  /** Every project's kept lines, oldest first (for the snapshot). */
   recent(): TickerItem[] {
     return this.items.slice();
   }

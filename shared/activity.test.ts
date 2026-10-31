@@ -135,11 +135,11 @@ describe('toolActivity', () => {
   it('maps the browser and the office tools', () => {
     expect(tool('mcp__playwright__browser_navigate', '🌐 navigate http://localhost:5173/todos?token=abc')).toEqual({ kind: 'browse', detail: 'navigate localhost:5173' });
     expect(tool('mcp__playwright__browser_take_screenshot', '🌐 take_screenshot')).toEqual({ kind: 'browse', detail: 'take screenshot' });
-    expect(tool('mcp__office__file_issue', '📝 file_issue "Add dark mode" → floor 2')).toEqual({ kind: 'git', detail: 'file issue' });
-    expect(tool('mcp__office__escalate', '📣 escalate PR #12 → floor 1: stuck')).toEqual({ kind: 'talk', detail: 'escalate #12' });
-    expect(tool('mcp__office__scale_team', '📈 scale_team floor 1 → 6')).toEqual({ kind: 'talk', detail: 'scale team' });
+    expect(tool('mcp__office__file_issue', '📝 file_issue "Add dark mode" → project 2')).toEqual({ kind: 'git', detail: 'file issue' });
+    expect(tool('mcp__office__escalate', '📣 escalate PR #12 → project 1: stuck')).toEqual({ kind: 'talk', detail: 'escalate #12' });
+    expect(tool('mcp__office__scale_team', '📈 scale_team project 1 → 6')).toEqual({ kind: 'talk', detail: 'scale team' });
     expect(tool('mcp__office__configure_agent', '⚙️ configure_agent ada')).toEqual({ kind: 'edit', detail: 'configure agent' });
-    expect(tool('mcp__office__set_dependencies', '🔗 set_dependencies #4 → floor 1')).toEqual({ kind: 'edit', detail: 'set dependencies #4' });
+    expect(tool('mcp__office__set_dependencies', '🔗 set_dependencies #4 → project 1')).toEqual({ kind: 'edit', detail: 'set dependencies #4' });
   });
 
   it('ignores bookkeeping', () => {
