@@ -82,7 +82,7 @@ export function DoctorCard() {
   const doctor = useStore((s) => s.doctor);
   const demo = useStore((s) => s.demo);
   return (
-    <Card className="gap-4">
+    <Card id="office-doctor" className="scroll-mt-20 gap-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Stethoscope className="size-4 text-muted-foreground" aria-hidden /> Office doctor

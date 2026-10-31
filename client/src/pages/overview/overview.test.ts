@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OpsAlarm, OpsFloor, TickerItem } from '../../../../shared/types';
 import { EMPTY_NUMBERS } from '../../ops';
-import { alarmLink, feedItems, nextSort, pipelineSegments, pipelineText, sortFloors, sparkPoints, sparkSummary, type FloorRow } from './overview';
+import { alarmLink, feedItems, nextSort, pipelineSegments, pipelineText, sortFloors, sparkPoints, sparkSummary, todaysReport, type FloorRow, type ReportInput, type ReportProject } from './overview';
 
 const floor = (n: number, patch: Partial<OpsFloor> = {}): OpsFloor => ({ ...EMPTY_NUMBERS, repoId: `o/r${n}`, floor: n, alarms: 0, ...patch });
 const row = (name: string, f: OpsFloor): FloorRow => ({ name, floor: f });
@@ -95,5 +95,43 @@ describe('alarm links', () => {
     expect(alarmLink(alarm({ prNumber: 34 }))).toBe('/projects/demo-co/pixel-todo?card=pr-34');
     expect(alarmLink(alarm({ kind: 'agent', agentId: 'a 1' }))).toBe('/agents/a%201');
     expect(alarmLink(alarm({}))).toBe('/projects/demo-co/pixel-todo');
+  });
+});
+
+describe("today's report", () => {
+  const project = (p: Partial<ReportProject>): ReportProject => ({ name: 'app', issues: 0, prs: 0, ready: 0, needsYou: 0, autoAssign: true, working: 0, idle: 0, ...p });
+  const clock = () => '14:30';
+  const base = { pending: 0, running: 0, sessionLimit: 0, ceo: null };
+
+  it('says there is nothing yet without projects', () => {
+    expect(todaysReport({ ...base, projects: [] }, clock)).toEqual([{ tone: 'neutral', text: 'No projects yet. Add one and the CEO will staff it.' }]);
+  });
+
+  it('puts what waits on the manager first', () => {
+    const lines = todaysReport(
+      { ...base, pending: 1, running: 2, sessionLimit: 4, projects: [project({ name: 'web', ready: 2, needsYou: 1, prs: 3 }), project({ name: 'api', ready: 1, prs: 1 })] },
+      clock,
+    );
+    expect(lines.map((l) => l.tone)).toEqual(['success', 'danger', 'warning', 'neutral', 'neutral']);
+    expect(lines[0].text).toBe('3 pull requests passed QA and are ready for you to merge (web: 2, api: 1).');
+    expect(lines[1].text).toBe("1 pull request needs your call: the team can't move it on alone.");
+    expect(lines[2].text).toBe('1 team change is waiting for your decision.');
+    expect(lines[3].text).toBe('2 of 4 session slots are busy right now.');
+    expect(lines[4].text).toBe('Most work in flight: web (0 issues, 3 PRs).');
+  });
+
+  it('points at idle agents waiting for auto-assign', () => {
+    const lines = todaysReport({ ...base, projects: [project({ name: 'web', issues: 2, autoAssign: false, idle: 1 })] }, clock);
+    expect(lines.map((l) => l.text)).toContain('web has 2 open issues and free agents, but auto-assign is off.');
+    // Busy agents, or auto-assign on, say nothing.
+    for (const p of [project({ issues: 2, autoAssign: false, idle: 1, working: 1 }), project({ issues: 2, idle: 1 })])
+      expect(todaysReport({ ...base, projects: [p] }, clock).some((l) => l.text.includes('auto-assign is off'))).toBe(false);
+  });
+
+  it('ends with the CEO', () => {
+    const at = (ceo: ReportInput['ceo']) => todaysReport({ ...base, projects: [project({})], ceo }, clock).at(-1)?.text;
+    expect(at({ name: 'Morgan', job: 'Planning web', nextReviewAt: null })).toBe('Morgan is on: Planning web.');
+    expect(at({ name: 'Morgan', job: null, nextReviewAt: 1 })).toBe('Morgan reviews the company next at 14:30.');
+    expect(at({ name: 'Morgan', job: null, nextReviewAt: null })).toBe("Morgan's periodic reviews are off.");
   });
 });

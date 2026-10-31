@@ -136,3 +136,73 @@ export function feedItems(ticker: TickerItem[], repoId: string | null, limit: nu
   }
   return out;
 }
+
+/** One project's numbers for the report. */
+export interface ReportProject {
+  name: string;
+  issues: number;
+  prs: number;
+  ready: number;
+  needsYou: number;
+  autoAssign: boolean;
+  working: number;
+  idle: number;
+}
+
+export interface ReportInput {
+  projects: ReportProject[];
+  pending: number; // team changes waiting on the manager
+  running: number; // sessions running now
+  sessionLimit: number; // 0: none
+  ceo: { name: string; job: string | null; nextReviewAt: number | null } | null;
+}
+
+export interface ReportLine {
+  tone: Tone;
+  text: string;
+}
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/**
+ * Today's report, cubefarm's phone Company tab: a few plain sentences, most urgent first: PRs to merge, PRs that need
+ * the manager, team changes, session slots, projects whose idle agents wait for auto-assign, the busiest project, the CEO.
+ */
+export function todaysReport(r: ReportInput, clock: (t: number) => string): ReportLine[] {
+  if (r.projects.length === 0) return [{ tone: 'neutral', text: 'No projects yet. Add one and the CEO will staff it.' }];
+  const lines: ReportLine[] = [];
+  const ready = r.projects.filter((p) => p.ready > 0);
+  const readyN = ready.reduce((n, p) => n + p.ready, 0);
+  if (readyN) {
+    const where = ready.map((p) => `${p.name}: ${p.ready}`).join(', ');
+    lines.push({ tone: 'success', text: `${readyN} pull ${plural(readyN, 'request passed QA and is', 'requests passed QA and are')} ready for you to merge (${where}).` });
+  }
+  const stuck = r.projects.reduce((n, p) => n + p.needsYou, 0);
+  if (stuck) lines.push({ tone: 'danger', text: `${stuck} pull ${plural(stuck, 'request needs', 'requests need')} your call: the team can't move ${plural(stuck, 'it', 'them')} on alone.` });
+  if (r.pending) lines.push({ tone: 'warning', text: `${r.pending} team ${plural(r.pending, 'change is', 'changes are')} waiting for your decision.` });
+  lines.push({
+    tone: 'neutral',
+    text: r.sessionLimit
+      ? r.running
+        ? `${r.running} of ${r.sessionLimit} session slots are busy right now.`
+        : `Nobody is working at the moment (${r.sessionLimit} session slots free).`
+      : r.running
+        ? `${r.running} ${plural(r.running, 'session is', 'sessions are')} running right now.`
+        : 'Nobody is working at the moment.',
+  });
+  for (const p of r.projects) {
+    if (p.issues > 0 && !p.autoAssign && p.working === 0 && p.idle > 0)
+      lines.push({ tone: 'info', text: `${p.name} has ${p.issues} open ${plural(p.issues, 'issue', 'issues')} and free agents, but auto-assign is off.` });
+  }
+  const busiest = [...r.projects].sort((a, b) => b.issues + b.prs - (a.issues + a.prs))[0];
+  if (r.projects.length > 1 && busiest.issues + busiest.prs > 0)
+    lines.push({ tone: 'neutral', text: `Most work in flight: ${busiest.name} (${busiest.issues} ${plural(busiest.issues, 'issue', 'issues')}, ${busiest.prs} ${plural(busiest.prs, 'PR', 'PRs')}).` });
+  if (r.ceo) {
+    const { name, job, nextReviewAt } = r.ceo;
+    lines.push({
+      tone: 'neutral',
+      text: job ? `${name} is on: ${job}.` : nextReviewAt ? `${name} reviews the company next at ${clock(nextReviewAt)}.` : `${name}'s periodic reviews are off.`,
+    });
+  }
+  return lines;
+}
