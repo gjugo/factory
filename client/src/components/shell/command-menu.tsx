@@ -1,4 +1,4 @@
-import { Bot, Crown, FolderGit2, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
+import { Bot, Crown, FolderGit2, History, LayoutDashboard, Plus, Search, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { StatusDot } from '@/components/shared/status-badge';
@@ -17,6 +17,7 @@ const PAGES = [
   { label: 'Add a project', to: links.addProject(), icon: Plus },
   { label: 'Agents', to: links.agents(), icon: Bot },
   { label: 'CEO', to: links.ceo(), icon: Crown },
+  { label: 'Time-lapse', to: links.timelapse(), icon: History },
   { label: 'Settings', to: links.settings(), icon: Settings },
 ];
 

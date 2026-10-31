@@ -32,6 +32,8 @@ export function crumbsFor(pathname: string, names: CrumbNames): Crumb[] {
       return last([{ label: 'Agents', to: links.agents() }, { label: names.agent(parts[1]) ?? (parts[1] === CEO_ID ? 'CEO' : parts[1]) }]);
     case 'ceo':
       return [{ label: 'CEO' }];
+    case 'timelapse':
+      return [{ label: 'Time-lapse' }];
     case 'settings':
       return [{ label: 'Settings' }];
     case 'setup':

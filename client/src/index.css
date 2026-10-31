@@ -124,6 +124,17 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* The time-lapse (components/shell/replay-bar.tsx): the controls that would act look off, matching what the replay
+   guard stops (lib/replay-guard.ts). */
+@layer components {
+  html[data-replaying]
+    :is(button[type="submit"], input[type="submit"], [role="switch"], [role="checkbox"], input[type="checkbox"], textarea, form input, form select):not(
+      :is([data-replay-ok], [data-sidebar], [data-sonner-toaster], [cmdk-root]) *
+    ) {
+    @apply cursor-not-allowed opacity-50;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

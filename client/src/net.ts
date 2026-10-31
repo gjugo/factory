@@ -15,12 +15,22 @@ function sendWatch() {
   socket.send(watch);
 }
 let watching = false;
+// Back from the time-lapse: everything waits for the fresh snapshot asked for, so nothing applies on top of the replay.
+let awaitingSnapshot = false;
+// What isn't part of the replayed office (the office's settings, its update, where notifications go…) stays live.
+const OUTSIDE_REPLAY = new Set<ServerEvent['type']>(['notify', 'notifyChannels', 'settings', 'officeUpdate', 'clis', 'voiceKey', 'voiceCache', 'cloud', 'doctor', 'progress', 'visitors', 'visitorPose', 'visitorEmote', 'visitorPing']);
 
 /** Sends a message on /ws; false while disconnected, when it's dropped. */
 export function sendWs(msg: ClientEvent) {
   if (socket?.readyState !== WebSocket.OPEN) return false;
   socket.send(JSON.stringify(msg));
   return true;
+}
+
+/** The time-lapse stopped: asks for the live office again (a reconnect brings a snapshot anyway). */
+export function requestSnapshot() {
+  awaitingSnapshot = true;
+  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'resync' } satisfies ClientEvent));
 }
 
 // The commit this tab last reloaded for, so a new office commit reloads the page at most once.
@@ -65,6 +75,15 @@ export function connect() {
     try {
       const ev = JSON.parse(e.data) as ServerEvent;
       if (ev.type === 'snapshot' && ev.data.officeCommit && reloadForNewCommit(ev.data.officeCommit)) return;
+      // While the time-lapse plays it owns the office; stopping asks for a fresh snapshot, which brings everything
+      // that happened meanwhile (and the agents' lines after it).
+      if (!OUTSIDE_REPLAY.has(ev.type)) {
+        if (useStore.getState().replaying) return;
+        if (awaitingSnapshot) {
+          if (ev.type !== 'snapshot') return;
+          awaitingSnapshot = false;
+        }
+      }
       useStore.getState().apply(ev);
     } catch (err) {
       console.error('bad server event', err);

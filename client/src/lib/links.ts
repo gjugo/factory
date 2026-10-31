@@ -18,6 +18,7 @@ export const links = {
   agent: (id: string, tab?: AgentTab) => `/agents/${encodeURIComponent(id)}${tab && tab !== 'terminal' ? `?tab=${tab}` : ''}`,
   ceo: () => '/ceo',
   settings: () => '/settings',
+  timelapse: () => '/timelapse',
   setup: () => '/setup',
 };
 

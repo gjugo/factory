@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { create } from 'zustand';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { buttonVariants } from '@/components/ui/button';
+import { showReplayHint } from '@/lib/replay-guard';
+import { useStore } from '@/store';
 
 // The dashboard's own confirmation, instead of the browser's confirm():
 //   if (await confirmDialog({ title: 'Merge PR #12?', confirm: 'Merge' })) …
@@ -18,6 +20,11 @@ export interface Ask {
 const useConfirm = create<{ ask: (Ask & { resolve: (ok: boolean) => void }) | null }>(() => ({ ask: null }));
 
 export function confirmDialog(ask: Ask): Promise<boolean> {
+  // Every question here leads to an action, and none can be taken while the time-lapse plays.
+  if (useStore.getState().replaying) {
+    showReplayHint();
+    return Promise.resolve(false);
+  }
   return new Promise((resolve) => {
     useConfirm.getState().ask?.resolve(false); // a newer question replaces an unanswered one
     useConfirm.setState({ ask: { ...ask, resolve } });

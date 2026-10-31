@@ -126,6 +126,24 @@ describe('sampleDay', () => {
     expect([...tasks.values()].some((t) => t.has('fix'))).toBe(true);
   });
 
+  it("moves mission control's numbers through the day: in every keyframe, and as events when they change", () => {
+    const frames = lines.filter(isFrame);
+    expect(frames.every((f) => f.k.ops?.floors.length === base.repos.length)).toBe(true);
+    const ops = lines.flatMap((l) => (!isFrame(l) && l.e.type === 'ops' ? [l.e.ops] : []));
+    expect(ops.length).toBeGreaterThan(10);
+    expect(new Set(ops.map((o) => o.total.building)).size).toBeGreaterThan(1);
+    expect(ops.at(-1)!.total.mergedToday).toBe(marksOf(lines).filter((m) => m.kind === 'merge').length);
+    expect(ops.some((o) => o.total.needsYou > 0)).toBe(true);
+  });
+
+  it("leaves out the lead time of the office's own issues, opened after the made-up day", () => {
+    const later = new Date(midnight + 30 * 60 * MIN).toISOString();
+    const today = { ...base, repos: base.repos.map((r) => ({ ...r, issues: r.issues.map((i) => ({ ...i, createdAt: later })) })) };
+    const ops = sampleDay(today, midnight, seeded(42)).flatMap((l) => (!isFrame(l) && l.e.type === 'ops' ? [l.e.ops] : []));
+    expect(ops.at(-1)!.total.mergedToday).toBeGreaterThan(0);
+    expect(ops.every((o) => o.total.leadMs === null || o.total.leadMs >= 0)).toBe(true);
+  });
+
   it('is the same day for the same seed', () => {
     expect(JSON.stringify(sampleDay(base, midnight, seeded(42)))).toBe(JSON.stringify(lines));
   });

@@ -78,6 +78,14 @@ describe('apply: toasts', () => {
     opts.action.onClick();
     expect(useStore.getState().ceoOpen).toBe(true);
   });
+
+  it('never toasts a replayed CEO message, playing or seeking, but shows it in the thread', () => {
+    useStore.setState({ loaded: true, messages: [] });
+    useStore.getState().apply({ type: 'message', message: msg(6, 'ceo', 'Yesterday') }, 'play');
+    useStore.getState().apply({ type: 'message', message: msg(7, 'ceo', 'Earlier') }, 'seek');
+    expect(toast).not.toHaveBeenCalled();
+    expect(useStore.getState().messages.map((m) => m.id)).toEqual([6, 7]);
+  });
 });
 
 describe('the watch in the store', () => {
