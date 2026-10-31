@@ -371,7 +371,7 @@ export interface SwarmSettings {
   ui: UiSettings; // the dashboard's theme and layout (shared/ui.ts)
 }
 
-/** What the office tells the manager about when they're away (docs/pocket.md). */
+/** What the office tells the manager about when they're away (docs/notifications.md). */
 export type NotifyEvent = 'needsHuman' | 'ceoMessage' | 'hire' | 'agentError' | 'usage' | 'merge';
 
 /** Where it tells them: this browser, Web Push to their devices, or a chat app's webhook. */
@@ -399,7 +399,7 @@ export interface NoteView {
   title: string;
   body: string;
   at: number;
-  url: string; // in-app link, e.g. '/?tab=approvals'
+  url: string; // the dashboard page it's about, e.g. '/ceo' (shared/notify.ts noteUrl)
 }
 
 /** Who reads phone messages aloud: nobody, the browser's own voice, or ElevenLabs (with the manager's key). */

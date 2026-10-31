@@ -1,6 +1,7 @@
-// Notifications, the pure part (docs/pocket.md): what a note says on each channel, the per-event rate limit that
+// Notifications, the pure part (docs/notifications.md): what a note says on each channel, the per-event rate limit that
 // batches bursts into one summary, the chat apps' webhook settings (checked, and hinted at without the secret), and
 // which agents have been stuck in an error long enough to mention. notifier.ts does the sending.
+import { noteUrl, officeLink, type NoteTarget } from '../shared/notify.ts';
 import type { NotifyEvent, NotifyWebhook } from '../shared/types.ts';
 import { HttpError } from './httpError.ts';
 
@@ -18,6 +19,8 @@ export interface Note {
   title: string;
   body: string;
   line: string;
+  /** What it's about, for its link (noteUrl). */
+  target?: NoteTarget;
 }
 
 const PLURAL: Record<NotifyEvent, string> = {
@@ -49,9 +52,23 @@ export function plainText(md: string, max = BODY_MAX): string {
 }
 
 /** A note with its event's icon in front of the title. */
-export function note(event: NotifyEvent | 'test', title: string, body: string, line = title): Note {
-  return { event, title: `${ICON[event]} ${clip(title, 120)}`, body: clip(body), line: clip(line, 120) };
+export function note(event: NotifyEvent | 'test', title: string, body: string, line = title, target?: NoteTarget): Note {
+  return { event, title: `${ICON[event]} ${clip(title, 120)}`, body: clip(body), line: clip(line, 120), ...(target ? { target } : {}) };
 }
+
+/** What every note in `notes` is about (a summary of PRs on one project links to its board), or undefined. */
+export function sharedTarget(notes: readonly Note[]): NoteTarget | undefined {
+  const keys = ['repoId', 'prNumber', 'agentId'] as const;
+  const out: NoteTarget = {};
+  for (const k of keys) {
+    const v = notes[0]?.target?.[k];
+    if (v !== undefined && notes.every((n) => n.target?.[k] === v)) Object.assign(out, { [k]: v });
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** The dashboard page a note opens. */
+export const notePath = (n: Note) => noteUrl(n.event, n.target);
 
 /** Several held notes of one event as a single summary (one note stays itself). `dropped`: more that weren't kept. */
 export function summarize(held: Note[], dropped = 0): Note {
@@ -62,7 +79,8 @@ export function summarize(held: Note[], dropped = 0): Note {
   const lines = shown.map((n) => `• ${n.line}`);
   if (total > shown.length) lines.push(`…and ${total - shown.length} more`);
   const label = event === 'test' ? 'tests' : PLURAL[event];
-  return { event, title: `${ICON[event]} ${total} more ${label}`, body: lines.join('\n'), line: `${total} more ${label}` };
+  const target = sharedTarget(held);
+  return { event, title: `${ICON[event]} ${total} more ${label}`, body: lines.join('\n'), line: `${total} more ${label}`, ...(target ? { target } : {}) };
 }
 
 // ---------- rate limit ----------
@@ -98,18 +116,18 @@ export function nextDue(gates: Gates): number | null {
 
 // ---------- what each channel is sent ----------
 
-/** The office's link, or nothing. */
-const link = (officeUrl: string) => (officeUrl ? `\n${officeUrl}` : '');
+/** The note's page on the office's address, or nothing when no address is set. */
+const link = (n: Note, officeUrl: string) => (officeUrl ? `\n${officeLink(officeUrl, notePath(n))}` : '');
 
 /** The note as plain text, e.g. for the demo's log and the push body. */
 export function noteText(n: Note, officeUrl = ''): string {
-  return `${n.title}\n${n.body}${link(officeUrl)}`.trim();
+  return `${n.title}\n${n.body}${link(n, officeUrl)}`.trim();
 }
 
 /** ntfy's JSON publishing: POSTed to the server's root with the topic in the body. */
 export function ntfyPayload(n: Note, topic: string, officeUrl = '') {
   const urgent = n.event === 'needsHuman' || n.event === 'agentError' || n.event === 'usage';
-  return { topic, title: n.title, message: n.body, priority: urgent ? 4 : 3, ...(officeUrl ? { click: officeUrl } : {}) };
+  return { topic, title: n.title, message: n.body, priority: urgent ? 4 : 3, ...(officeUrl ? { click: officeLink(officeUrl, notePath(n)) } : {}) };
 }
 
 // ---------- the chat apps' settings ----------

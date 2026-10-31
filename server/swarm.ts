@@ -600,7 +600,7 @@ export class Swarm {
   /** What the office looked like over the last week, for the time-lapse replay. The demo keeps its own. */
   readonly journal: Journal;
   private readonly envSecrets = envSecrets(process.env);
-  /** Notifications to the manager's devices and chat apps (docs/pocket.md). The demo's only log what they'd send. */
+  /** Notifications to the manager's devices and chat apps (docs/notifications.md). The demo's only log what they'd send. */
   readonly notifier: Notifier;
   /** Settings → Cloud agents: the Upstash account and what cloud agents sign in with (docs/cloud.md). The demo's is fake. */
   readonly cloud: Cloud;
@@ -5053,12 +5053,12 @@ export class Swarm {
     const repo = this.state.repos.find((r) => r.id === rec.repoId);
     const title = this.repoRt.get(rec.repoId)?.pulls.find((p) => p.number === rec.prNumber)?.title;
     const name = repo?.fullName.split('/')[1] ?? rec.repoId;
-    this.notifier.notify('needsHuman', `PR #${rec.prNumber} needs you`, `${name}${title ? `: ${title}` : ''}. ${rec.stuckWhy ? `Stuck because ${rec.stuckWhy}.` : rec.summary ?? ''}`, `${name} #${rec.prNumber}${title ? ` ${title}` : ''}`);
+    this.notifier.notify('needsHuman', `PR #${rec.prNumber} needs you`, `${name}${title ? `: ${title}` : ''}. ${rec.stuckWhy ? `Stuck because ${rec.stuckWhy}.` : rec.summary ?? ''}`, `${name} #${rec.prNumber}${title ? ` ${title}` : ''}`, { repoId: rec.repoId, prNumber: rec.prNumber });
   }
 
   private notifyMerge(repo: PersistedRepo, n: number, title: string) {
     const name = repo.fullName.split('/')[1];
-    this.notifier.notify('merge', `Merged PR #${n}`, `${name}${title ? `: ${title}` : ''}`, `${name} #${n}${title ? ` ${title}` : ''}`);
+    this.notifier.notify('merge', `Merged PR #${n}`, `${name}${title ? `: ${title}` : ''}`, `${name} #${n}${title ? ` ${title}` : ''}`, { repoId: repo.id, prNumber: n });
   }
 
   /** Agents stuck in an error for STUCK_ERROR_MS: the manager hears once per error (checked every minute). */
@@ -5068,7 +5068,7 @@ export class Swarm {
       this.toldStuck.add(key);
       const repo = this.state.repos.find((r) => r.id === a.repoId);
       const mins = Math.round((now - (a.endedAt ?? now)) / 60_000);
-      this.notifier.notify('agentError', `${a.name} needs help`, `In an error for ${mins} minutes${repo ? ` on floor ${repo.floor}` : ''}: ${clip(a.lastError ?? 'their session failed', 200)}`, `${a.name}${repo ? ` (floor ${repo.floor})` : ''}`);
+      this.notifier.notify('agentError', `${a.name} needs help`, `In an error for ${mins} minutes${repo ? ` on floor ${repo.floor}` : ''}: ${clip(a.lastError ?? 'their session failed', 200)}`, `${a.name}${repo ? ` (floor ${repo.floor})` : ''}`, { agentId: a.id, ...(repo ? { repoId: repo.id } : {}) });
     }
     for (const key of this.toldStuck) if (!this.state.agents.some((a) => key === `${a.id}:${a.endedAt ?? 0}` && a.status === 'error')) this.toldStuck.delete(key);
   }
@@ -5301,7 +5301,7 @@ export class Swarm {
     if (made.length) {
       const text = `📈 Floor ${repo.floor}: from ${before} to ${plan.size} agents? I'd ${asks}. ${reason}`;
       this.postMessage('ceo', hires.length ? `${text} ${hires.length === 1 ? `${hires[0].name} waits` : 'They wait'} in the lobby, where you can set them up before hiring.` : text, made.length === 1 ? made[0].id : undefined);
-      this.notifier.notify('hire', `Floor ${repo.floor}: ${before} → ${plan.size} agents?`, `${this.ceo().name} would ${asks}. ${plainText(reason)}`, `floor ${repo.floor} team change`);
+      this.notifier.notify('hire', `Floor ${repo.floor}: ${before} → ${plan.size} agents?`, `${this.ceo().name} would ${asks}. ${plainText(reason)}`, `floor ${repo.floor} team change`, { repoId: repo.id });
     }
     return `Floor ${repo.floor} goes from ${before} to ${plan.size} agents${capped} once the manager agrees: ${asks || 'withdrew the waiting changes'}.`;
   }
