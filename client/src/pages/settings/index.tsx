@@ -20,6 +20,7 @@ import { modelSuggestions } from '../../../../shared/models';
 import { UI_THEMES, type UiTheme } from '../../../../shared/ui';
 import { NotificationSettings } from './notifications-card';
 import { EnvironmentCard, OfficeUpdateCard } from './office-info';
+import { VoiceSettingsSection } from './voice-settings';
 
 const THEME_LABEL: Record<UiTheme, string> = { light: 'Light', dark: 'Dark', system: 'System' };
 
@@ -37,6 +38,7 @@ export default function SettingsPage() {
         </div>
       </div>
       <NotificationSettings />
+      <VoiceSettingsSection />
     </div>
   );
 }

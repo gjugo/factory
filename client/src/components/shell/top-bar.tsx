@@ -11,6 +11,7 @@ import { crumbsFor } from '@/lib/crumbs';
 import { links } from '@/lib/links';
 import { cn } from '@/lib/utils';
 import { totalNeedsYou, useStore } from '@/store';
+import { SpeakingIndicator } from '@/components/voice/speaking-indicator';
 import { CeoSheet } from './ceo-sheet';
 import { CommandMenu } from './command-menu';
 import { ConnectionStatus } from './connection-status';
@@ -18,7 +19,10 @@ import { ProjectSwitcher } from './project-switcher';
 import { ReplayBadge } from './replay-bar';
 import { ThemeToggle } from './theme-toggle';
 
-/** The bar over every page: where you are, the project switcher, the office's state, what needs you, the CEO and the theme. */
+/**
+ * The bar over every page: where you are, the project switcher, the office's state, a message being read aloud, what
+ * needs you, the CEO and the theme.
+ */
 export function TopBar() {
   const { pathname } = useLocation();
   const repos = useStore((s) => s.repos);
@@ -62,6 +66,7 @@ export function TopBar() {
         <div className="hidden sm:block">
           <ConnectionStatus />
         </div>
+        <SpeakingIndicator />
         <CommandMenu />
         <Tooltip>
           <TooltipTrigger asChild>

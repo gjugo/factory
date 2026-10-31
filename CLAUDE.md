@@ -70,6 +70,10 @@ Client (`client/`, the Vite root; React 19, React Router, Tailwind v4, shadcn/ui
   and `useWorkersWatch()` in `src/hooks/use-watch.ts`.
 - `src/api.ts`: REST commands; errors become toasts. `ops.ts`, `qaCard.ts`, `officeUpdate.ts`, `notifications.ts`:
   cubefarm's pure helpers.
+- `src/voice/`: read aloud and talk instead of type (docs in cubefarm's `docs/voice.md`): `speaker.ts` (lazy), `claim.ts`
+  (one tab per message), `audio.ts` (sound after the first gesture), `mic.ts`, and the pure, tested rules
+  (`voiceQueue`, `micSilence`, `handsFree`, `micKeys`, `micText`, `voicePicker`). QA probes: `window.__swarmVoice`,
+  `window.__swarmMic` (`fake()`, `say()`). Its components are in `src/components/voice/`.
 - `src/lib/links.ts`: every URL (pages, boards, board cards `?card=issue-12` / `?card=pr-34`). Never hand-write a path.
 - `src/lib/theme.ts`: light/dark/system from `settings.ui.theme`; localStorage is only the first-paint cache.
 - `src/components/ui/`: shadcn/ui components (add more with `npx shadcn@latest add <name>`; don't hand-edit them
