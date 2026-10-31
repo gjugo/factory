@@ -16,7 +16,7 @@ const snapshot = (repos: RepoView[], agents: Partial<AgentView>[] = []) =>
 const alarmFor = (id: string, repoId = 'acme/floor1'): OpsAlarm => ({ id, kind: 'pr', repoId, floor: 1, prNumber: 7, agentId: null, text: 'PR #7 needs you', since: 1 });
 
 beforeEach(() => {
-  useStore.setState({ loaded: false, repos: [], agents: {}, ops: EMPTY_OPS, ceoOpen: false, watched: {}, workers: 0, floor: -1 });
+  useStore.setState({ loaded: false, repos: [], agents: {}, ops: EMPTY_OPS, ceoOpen: false, chatViews: 0, watched: {}, workers: 0, floor: -1 });
   vi.mocked(toast).mockClear();
   vi.mocked(toast.error).mockClear();
 });
@@ -60,12 +60,23 @@ describe('apply: toasts', () => {
     apply({ ...snapshot([], [{ id: CEO_ID, name: 'Morgan', role: 'ceo', log: [] }]), data: { ...snapshot([]).data, agents: [{ id: CEO_ID, name: 'Morgan', role: 'ceo', log: [] } as unknown as AgentView], messages: [msg(0, 'ceo', 'old')] } });
     expect(toast).not.toHaveBeenCalled();
     apply({ type: 'message', message: msg(1, 'ceo', 'Ship it') });
-    expect(toast).toHaveBeenCalledWith('Morgan: Ship it');
+    expect(toast).toHaveBeenCalledWith('Morgan: Ship it', expect.objectContaining({ action: expect.objectContaining({ label: 'Open chat' }) }));
     useStore.getState().setCeoOpen(true);
     apply({ type: 'message', message: msg(2, 'ceo', 'Reading this here') });
     apply({ type: 'message', message: msg(3, 'manager', 'Me') });
+    useStore.getState().setCeoOpen(false);
+    useStore.getState().watchChat(1); // the CEO page's thread is on screen
+    apply({ type: 'message', message: msg(4, 'ceo', 'Seen on the page') });
     expect(toast).toHaveBeenCalledTimes(1);
-    expect(useStore.getState().messages.map((m) => m.id)).toEqual([0, 1, 2, 3]);
+    expect(useStore.getState().messages.map((m) => m.id)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("opens the chat from the toast's action", () => {
+    useStore.setState({ loaded: true });
+    useStore.getState().apply({ type: 'message', message: msg(5, 'ceo', 'Hi') });
+    const opts = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } };
+    opts.action.onClick();
+    expect(useStore.getState().ceoOpen).toBe(true);
   });
 });
 

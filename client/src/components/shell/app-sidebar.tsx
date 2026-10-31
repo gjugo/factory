@@ -21,7 +21,7 @@ import {
 import { HEALTH_LOOK, useProjectRows } from '@/hooks/use-project-rows';
 import { useRouteRepo } from '@/hooks/use-route-repo';
 import { links } from '@/lib/links';
-import { useStore } from '@/store';
+import { useCeoBadge, useStore } from '@/store';
 
 // The sidebar: the office's pages, then every project (a cubefarm floor) with its status and what waits on the manager.
 // Below md it is a sheet (shadcn's Sidebar does that itself) that closes once something in it is picked.
@@ -39,6 +39,7 @@ export function AppSidebar() {
   const loaded = useStore((s) => s.loaded);
   const company = useStore((s) => s.settings.companyName);
   const rows = useProjectRows();
+  const ceoBadge = useCeoBadge();
   const { repoId } = useRouteRepo();
   const close = () => setOpenMobile(false);
   const active = (to: string, exact?: boolean) => (exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
@@ -75,6 +76,11 @@ export function AppSidebar() {
                       <span>{p.title}</span>
                     </Link>
                   </SidebarMenuButton>
+                  {p.to === links.ceo() && ceoBadge > 0 && (
+                    <SidebarMenuBadge className="bg-primary/10 text-primary" aria-label={`${ceoBadge} unread or waiting on you`}>
+                      {ceoBadge > 99 ? '99+' : ceoBadge}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
