@@ -56,13 +56,13 @@ export async function repoMeta(fullName: string): Promise<RepoMeta> {
 
 export async function listIssues(fullName: string): Promise<IssueInfo[]> {
   const raw = await readTwice(() =>
-    ghJson<{ number: number; title: string; body: string; url: string; labels: { name: string }[]; createdAt: string }[]>(
-      ['issue', 'list', '-R', fullName, '--state', 'open', '--limit', '100', '--json', 'number,title,body,url,labels,createdAt'],
+    ghJson<{ number: number; title: string; body: string; url: string; labels: { name: string }[]; createdAt: string; author: { login: string } | null }[]>(
+      ['issue', 'list', '-R', fullName, '--state', 'open', '--limit', '100', '--json', 'number,title,body,url,labels,createdAt,author'],
       SYNC_READ,
     ),
   );
   return raw
-    .map((i) => ({ number: i.number, title: i.title, body: i.body ?? '', url: i.url, labels: i.labels.map((l) => l.name), createdAt: i.createdAt }))
+    .map((i) => ({ number: i.number, title: i.title, body: i.body ?? '', url: i.url, labels: i.labels.map((l) => l.name), createdAt: i.createdAt, author: i.author?.login ?? '' }))
     .sort((a, b) => a.number - b.number);
 }
 
@@ -296,6 +296,16 @@ export async function prDetails(fullName: string, number: number): Promise<PrDet
 export async function issueDetails(fullName: string, number: number): Promise<{ title: string; body: string; createdAt: string }> {
   const raw = await ghJson<{ title: string; body: string; createdAt: string }>(['issue', 'view', String(number), '-R', fullName, '--json', 'title,body,createdAt']);
   return { title: raw.title, body: raw.body ?? '', createdAt: raw.createdAt };
+}
+
+/**
+ * Who last added `label` to an issue (null when nobody did, or their account is gone), from its events, oldest first.
+ * The jq runs on each page, printing one login per labelling; the last line is the latest.
+ */
+export async function labelAdder(fullName: string, number: number, label: string): Promise<string | null> {
+  const jq = `.[] | select(.event == "labeled" and (.label.name | ascii_downcase) == ${JSON.stringify(label.toLowerCase())}) | .actor.login // ""`;
+  const out = await gh(['api', '--paginate', `repos/${fullName}/issues/${number}/events`, '--jq', jq], SYNC_READ);
+  return out.trim().split('\n').at(-1)?.trim() || null;
 }
 
 export async function commentPull(fullName: string, number: number, body: string): Promise<string> {

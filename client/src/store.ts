@@ -117,6 +117,7 @@ export const useStore = create<State>((set, get) => ({
     tutorialStep: -1,
     pacingSessions: 3,
     trimIdleDesksMin: 120,
+    trustedAuthors: [],
     voice: { provider: 'off', voiceId: '', voiceName: '', model: '', speakOffice: false, keepDays: 7 },
     listen: { provider: 'off', autoSend: false, handsFree: false },
     notify: DEFAULT_NOTIFY,
@@ -468,6 +469,7 @@ export function kanbanFor(repo: RepoView, agents: Agent[], qaRecords: Record<str
   const claimed = new Set<number>([...progress.map((c) => c.number), ...openPulls.flatMap((p) => p.closesIssues)]);
   const open = new Set(repo.issues.map((i) => i.number));
   const held = new Map((repo.held ?? []).map((h) => [h.issue, h.pr]));
+  const untrusted = new Set(repo.untrusted ?? []);
   const paced = repo.autoAssign && usage && usage.state !== 'normal' ? (usage.state === 'paused' ? '⏸ paused' : '⏸ paced') : '';
   const backlog: KanbanCard[] = repo.issues
     .filter((i) => !claimed.has(i.number))
@@ -477,6 +479,8 @@ export function kanbanFor(repo: RepoView, agents: Agent[], qaRecords: Record<str
       const card = { key: `i-${i.number}`, number: i.number, title: i.title, url: i.url };
       // Its PR was closed: it waits for the manager rather than going back to auto-assign.
       if (held.has(i.number)) return { ...card, note: `⏸ PR #${held.get(i.number)} closed · assign by hand`, tone: 'warn' as const };
+      // Filed by someone the office doesn't trust: it never starts on its own.
+      if (untrusted.has(i.number)) return { ...card, note: `🔒 by @${i.author || 'unknown'} · not trusted · assign by hand`, tone: 'warn' as const };
       return { ...card, note: (waits.length ? `⏳ after #${waits.join(', #')}` : [paced, labels].filter(Boolean).join(' · ')) || undefined };
     });
 

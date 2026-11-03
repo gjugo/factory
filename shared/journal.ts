@@ -142,6 +142,7 @@ const compactIssue = (i: IssueInfo, secrets: readonly string[]): IssueInfo => ({
   url: i.url,
   labels: i.labels.slice(0, 8).map((l) => clip(l, 40)),
   createdAt: i.createdAt,
+  author: clip(i.author ?? '', 60),
 });
 
 // Fields that change on every push, check run or sync without changing the office's look (the head sha, which checks
@@ -205,6 +206,7 @@ export function compactRepo(r: RepoView, secrets: readonly string[] = []): RepoV
     issues: r.issues.slice(0, 300).map((i) => compactIssue(i, secrets)),
     pulls: r.pulls.slice(0, 100).map((p) => compactPull(p, secrets)),
     held: (r.held ?? []).slice(0, 100).map((h) => ({ issue: h.issue, pr: h.pr })),
+    untrusted: (r.untrusted ?? []).slice(0, 100),
     lastSync: null,
     previewConfig: { command: null, env: {} },
     preview: compactPreview(r.preview),

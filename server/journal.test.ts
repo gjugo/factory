@@ -90,6 +90,7 @@ function repo(pulls: PullInfo[]): RepoView {
     issues: [],
     pulls,
     held: [],
+    untrusted: [],
     lastSync: null,
     previewConfig: { command: null, env: {} },
     preview: { status: 'stopped', port: 6301, url: null, ref: null, pr: null, commit: null, startedAt: null, error: null, logTail: [] },

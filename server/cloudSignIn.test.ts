@@ -18,6 +18,7 @@ afterEach(() => {
 
 async function office() {
   const swarm = new Swarm(createDemoBackend());
+  (swarm as unknown as { user: string }).user = 'demo-manager'; // as start() learns it: only the manager's issues start
   const connecting = swarm.connectRepo('demo-co/pixel-todo');
   await vi.advanceTimersByTimeAsync(2_000);
   const repo = await connecting;

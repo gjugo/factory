@@ -3,7 +3,7 @@ import type { IssueInfo, PullInfo, QaStatus, QaView, RepoView } from '../../../.
 import type { Agent, KanbanCard, KanbanColumns } from '@/store';
 import { backlogState, boardColumns, cardDetail, cardDomKey, filterColumns, findCard, freeAgents, initials, matchesFilter, NO_FILTER, noteTone, plainNote, repoLabels, shownNote } from './board';
 
-const issue = (number: number, labels: string[] = [], body = ''): IssueInfo => ({ number, title: `Issue ${number}`, body, url: '', labels, createdAt: '2026-10-01T10:00:00Z' });
+const issue = (number: number, labels: string[] = [], body = ''): IssueInfo => ({ number, title: `Issue ${number}`, body, url: '', labels, createdAt: '2026-10-01T10:00:00Z', author: 'manager' });
 const pull = (number: number, over: Partial<PullInfo> = {}): PullInfo =>
   ({ number, title: `PR ${number}`, state: 'OPEN', checks: 'passing', mergeable: 'MERGEABLE', closesIssues: [], createdAt: '2026-10-02T10:00:00Z', mergedAt: null, ...over }) as PullInfo;
 const prCard = (number: number, status?: QaStatus): KanbanCard => ({ key: `pr-${number}`, number, prNumber: number, title: `PR ${number}`, qa: status ? ({ status, round: 1 } as QaView) : undefined });
@@ -37,7 +37,7 @@ describe('boardColumns', () => {
 });
 
 describe('backlogState', () => {
-  const repo = (issues: IssueInfo[], held: RepoView['held'] = []) => ({ issues, held });
+  const repo = (issues: IssueInfo[], held: RepoView['held'] = [], untrusted: number[] = []) => ({ issues, held, untrusted });
 
   it('is ready, waiting on open issues, held after a closed PR, or skipped by label', () => {
     const issues = [issue(1), issue(2, [], 'Depends on #1 and #9'), issue(3), issue(4, ['swarm:skip']), issue(5, ['Question'])];
@@ -47,6 +47,14 @@ describe('backlogState', () => {
     expect(backlogState(issues[2], r).state).toBe('held');
     expect(backlogState(issues[3], r).state).toBe('skip');
     expect(backlogState(issues[4], r).state).toBe('skip');
+  });
+
+  it("is untrusted when someone the office doesn't trust filed it, even with a skip label", () => {
+    const issues = [issue(1), issue(2, ['swarm:skip'])];
+    const r = repo(issues, [], [1, 2]);
+    expect(backlogState(issues[0], r).state).toBe('untrusted');
+    expect(backlogState(issues[1], r).state).toBe('untrusted');
+    expect(backlogState(issues[0], { issues, held: [] }).state).toBe('ready'); // an older journal's project has no list
   });
 });
 

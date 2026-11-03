@@ -29,6 +29,7 @@ export interface IssueInfo {
   url: string;
   labels: string[];
   createdAt: string;
+  author: string; // who filed it (their GitHub login; '' when unknown)
 }
 
 export interface PullInfo {
@@ -78,6 +79,7 @@ export interface RepoView {
   issues: IssueInfo[]; // open issues
   pulls: PullInfo[]; // open + recently merged PRs
   held: { issue: number; pr: number }[]; // open issues whose PR was closed: they wait to be assigned by hand
+  untrusted: number[]; // open issues filed by someone the office doesn't trust (shared/issueTrust.ts): assigned by hand only
   lastSync: number | null;
   syncError?: string;
   previewConfig: PreviewConfig;
@@ -354,6 +356,7 @@ export interface SwarmSettings {
   autoUpdate?: boolean; // update the office itself once it's quiet (absent on servers without self-update)
   pacingSessions: number; // after Claude warns about usage, new issues start only while fewer sessions than this run
   trimIdleDesksMin: number; // a desk idle this many minutes loses its node_modules and build output; 0 = never
+  trustedAuthors: string[]; // GitHub logins besides the manager's whose issues start on their own (shared/issueTrust.ts)
   voice: VoiceSettings;
   listen: ListenSettings;
   notify: NotifySettings;

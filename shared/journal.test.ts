@@ -72,9 +72,10 @@ function repo(patch: Partial<RepoView> = {}): RepoView {
     localPath: 'C:\\Projects\\r',
     checkoutPath: 'C:\\Projects\\r',
     cloneStatus: 'ready',
-    issues: [{ number: 1, title: 'First', body: 'Long body text.\nDepends on #7', url: 'https://github.com/o/r/issues/1', labels: ['swarm:ui'], createdAt: '2026-10-01T09:00:00Z' }],
+    issues: [{ number: 1, title: 'First', body: 'Long body text.\nDepends on #7', url: 'https://github.com/o/r/issues/1', labels: ['swarm:ui'], createdAt: '2026-10-01T09:00:00Z', author: 'manager' }],
     pulls: [],
     held: [],
+    untrusted: [],
     lastSync: 123,
     previewConfig: { command: 'npm run dev', env: { API_KEY: 'preview-env-secret-123' } },
     preview: { status: 'running', port: 6301, url: 'http://localhost:6301', ref: 'main', pr: null, commit: 'abc1234', startedAt: 1, error: null, logTail: ['listening on 6301'] },
@@ -195,7 +196,7 @@ describe('journalEvent: what is kept', () => {
     const secrets = [SECRETS.env, SECRETS.eleven];
     const events: ServerEvent[] = [
       { type: 'agent', agent: agent({ lastError: `crashed with ${SECRETS.anthropic}`, branch: `swarm/${SECRETS.env}`, issueTitle: `Rotate ${SECRETS.github}`, currentTool: `Bash(${SECRETS.env})` }) },
-      { type: 'repo', repo: repo({ mission: SECRETS.env, issues: [{ number: 3, title: `Leak ${SECRETS.jwt}`, body: `token=${SECRETS.env}\nDepends on #1`, url: 'u', labels: [], createdAt: '' }] }) },
+      { type: 'repo', repo: repo({ mission: SECRETS.env, issues: [{ number: 3, title: `Leak ${SECRETS.jwt}`, body: `token=${SECRETS.env}\nDepends on #1`, url: 'u', labels: [], createdAt: '', author: '' }] }) },
       { type: 'message', message: { id: 2, from: 'manager', text: `my ElevenLabs key is ${SECRETS.eleven} and env ${SECRETS.env}`, at: 1 } },
       { type: 'qa', qa: qa({ summary: `ran with GITHUB_TOKEN=${SECRETS.github}`, checks: [{ name: 'tests', result: 'fail', details: `stderr: ${SECRETS.env}` }] }) },
       { type: 'request', request: { id: 'r1', kind: 'hire', repoId: 'o/r', agentId: null, name: 'Bo', reason: `needs ${SECRETS.anthropic}`, cli: '', model: '', effort: '', look: 'masculine', color: '', hair: '', skin: '', status: 'pending', note: `not now: ${SECRETS.env}`, createdAt: 1, decidedAt: null, decidedBy: null } },
@@ -385,7 +386,7 @@ describe('marksOf', () => {
       { t: 5, e: { type: 'qa', qa: qa({ status: 'needs-human', ceoLooking: true }) } }, // the CEO looks first: not yet
       { t: 6, e: { type: 'qa', qa: qa({ status: 'needs-human' }) } },
       { t: 7, e: { type: 'qa', qa: qa({ status: 'needs-human', round: 2 }) } }, // still needs you: no second mark
-      { t: 8, e: { type: 'repo', repo: repo({ pulls: [pull(2, 'MERGED')], issues: [...repo().issues, { number: 9, title: 'New one', body: '', url: '', labels: [], createdAt: '' }] }) } },
+      { t: 8, e: { type: 'repo', repo: repo({ pulls: [pull(2, 'MERGED')], issues: [...repo().issues, { number: 9, title: 'New one', body: '', url: '', labels: [], createdAt: '', author: '' }] }) } },
       { t: 9, e: { type: 'repo', repo: repo({ pulls: [pull(2, 'MERGED')] }) } }, // still merged: no second gong
     ];
     expect(marksOf(lines).map((m) => [m.t, m.kind, m.n])).toEqual([
@@ -410,7 +411,7 @@ describe('marksOf', () => {
       { t: 0, k: base },
       update(1, repo({ pulls: [pull(2, 'OPEN', { checks: 'failing' }), pull(3)] })),
       update(2, repo({ pulls: [pull(2, 'MERGED'), pull(3)] })),
-      update(3, repo({ pulls: [pull(2, 'MERGED'), pull(3, 'MERGED')], issues: [...repo().issues, { number: 8, title: 'More', body: '', url: '', labels: [], createdAt: '' }] })),
+      update(3, repo({ pulls: [pull(2, 'MERGED'), pull(3, 'MERGED')], issues: [...repo().issues, { number: 8, title: 'More', body: '', url: '', labels: [], createdAt: '', author: '' }] })),
     ];
     const written = compress(lines);
     expect(written.slice(1).every((l) => !isFrame(l) && l.e.type === 'repoPatch')).toBe(true);
