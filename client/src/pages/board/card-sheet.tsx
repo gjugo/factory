@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { links, type BoardCard } from '@/lib/links';
 import type { Tone } from '@/lib/status';
 import type { Agent, KanbanCard } from '@/store';
+import { APPROVED_LABEL } from '../../../../shared/issueTrust';
 import { blockers } from '../../../../shared/issues';
 import type { PullInfo, QaCheck, QaView, RepoView } from '../../../../shared/types';
 import { AgentAvatar, ChecksIcon, LineCounts } from './board-card';
@@ -132,6 +133,14 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
 
       <div className="grid gap-3 px-4 pb-4">
         <WhoHasIt card={card} column={column} since={since} />
+        {backlog === 'untrusted' && (
+          <Notice title={`Filed by @${issue?.author || 'someone unknown'}, who isn't a trusted author`}>
+            <p>
+              Agents only start it when you assign it. Read it first: its description becomes an agent's instructions. To let it start on its own, label it{' '}
+              <code className="font-mono">{APPROVED_LABEL}</code> on GitHub, or add its author under Settings → Trusted issue authors.
+            </p>
+          </Notice>
+        )}
         {waits.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             <Hourglass className="size-4" aria-hidden /> Waits for {waits.map(chip)}

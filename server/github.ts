@@ -56,13 +56,13 @@ export async function repoMeta(fullName: string): Promise<RepoMeta> {
 
 export async function listIssues(fullName: string): Promise<IssueInfo[]> {
   const raw = await readTwice(() =>
-    ghJson<{ number: number; title: string; body: string; url: string; labels: { name: string }[]; createdAt: string }[]>(
-      ['issue', 'list', '-R', fullName, '--state', 'open', '--limit', '100', '--json', 'number,title,body,url,labels,createdAt'],
+    ghJson<{ number: number; title: string; body: string; url: string; labels: { name: string }[]; createdAt: string; author: { login: string } | null }[]>(
+      ['issue', 'list', '-R', fullName, '--state', 'open', '--limit', '100', '--json', 'number,title,body,url,labels,createdAt,author'],
       SYNC_READ,
     ),
   );
   return raw
-    .map((i) => ({ number: i.number, title: i.title, body: i.body ?? '', url: i.url, labels: i.labels.map((l) => l.name), createdAt: i.createdAt }))
+    .map((i) => ({ number: i.number, title: i.title, body: i.body ?? '', url: i.url, labels: i.labels.map((l) => l.name), createdAt: i.createdAt, author: i.author?.login ?? '' }))
     .sort((a, b) => a.number - b.number);
 }
 

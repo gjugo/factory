@@ -128,7 +128,7 @@ export function sampleDay(base: JournalFrame, midnight: number, rand = seeded(7)
   const qaKey = (repoId: string, n: number) => `${repoId}#${n}`;
 
   function newIssue(r: Pick<RepoView, 'url'>, n: number, title: string, at: number): IssueInfo {
-    return { number: n, title, body: '', url: `${r.url}/issues/${n}`, labels: [], createdAt: iso(at) };
+    return { number: n, title, body: '', url: `${r.url}/issues/${n}`, labels: [], createdAt: iso(at), author: '' };
   }
 
   const claimed = (repo: RepoView) => {

@@ -51,19 +51,24 @@ function qaColumn(c: KanbanCard, pr: PullInfo | undefined): ColumnKey {
 /** The labels the board leaves alone: the scheduler never starts these (server/swarm.ts). */
 export const SKIP_LABEL = /^(swarm:skip|wontfix|question)$/i;
 
-export type BacklogState = 'ready' | 'waiting' | 'held' | 'skip';
+export type BacklogState = 'ready' | 'waiting' | 'held' | 'untrusted' | 'skip';
 
 export const BACKLOG_LOOK: Record<BacklogState, { label: string; tone: Tone }> = {
   ready: { label: 'Ready', tone: 'success' },
   waiting: { label: 'Waiting', tone: 'neutral' },
   held: { label: 'Held', tone: 'warning' },
+  untrusted: { label: 'Untrusted', tone: 'warning' },
   skip: { label: 'Skipped', tone: 'neutral' },
 };
 
-/** Why a backlog issue is (or isn't) next: ready to start, waiting on open issues, held after its PR closed, or skipped. */
-export function backlogState(issue: Pick<IssueInfo, 'number' | 'body' | 'labels'>, repo: Pick<RepoView, 'issues' | 'held'>): { state: BacklogState; waits: number[] } {
+/**
+ * Why a backlog issue is (or isn't) next: ready to start, waiting on open issues, held after its PR closed, filed by
+ * someone the office doesn't trust (shared/issueTrust.ts), or skipped.
+ */
+export function backlogState(issue: Pick<IssueInfo, 'number' | 'body' | 'labels'>, repo: Pick<RepoView, 'issues' | 'held'> & Partial<Pick<RepoView, 'untrusted'>>): { state: BacklogState; waits: number[] } {
   const waits = blockers(issue.body, new Set(repo.issues.map((i) => i.number)));
   if ((repo.held ?? []).some((h) => h.issue === issue.number)) return { state: 'held', waits };
+  if ((repo.untrusted ?? []).includes(issue.number)) return { state: 'untrusted', waits };
   if (issue.labels.some((l) => SKIP_LABEL.test(l))) return { state: 'skip', waits };
   return { state: waits.length ? 'waiting' : 'ready', waits };
 }
@@ -126,11 +131,11 @@ export const plainNote = (note: string | undefined) => (note ?? '').replace(/^[^
 
 /**
  * The note a card shows. A backlog card's note repeats its labels or blockers, which the board draws already; only a
- * held issue's note and pacing ("paused", "paced") say more there.
+ * held or untrusted issue's note and pacing ("paused", "paced") say more there.
  */
 export function shownNote(card: Pick<KanbanCard, 'note'>, column: ColumnKey, backlog?: BacklogState): string {
   const note = plainNote(card.note);
-  if (column !== 'backlog' || backlog === 'held') return note;
+  if (column !== 'backlog' || backlog === 'held' || backlog === 'untrusted') return note;
   return /\b(paused|paced)\b/.test(note) ? note.split(' · ')[0] : '';
 }
 

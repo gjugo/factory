@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { trustedAuthorList } from '../../../shared/issueTrust';
 import { PROJECT_SEATS, type AgentCli, type EffortLevel, type SwarmSettings } from '../../../shared/types';
 
 // The office settings form (/settings): its fields as typed (numbers stay strings until they validate), the limits the
@@ -40,6 +41,11 @@ export const officeSettingsSchema = z.object({
   pacingSessions: int('Sessions while pacing', LIMITS.pacingSessions),
   trimIdleDesksMin: int('Trim idle desks after', LIMITS.trimIdleDesksMin),
   autoUpdate: z.boolean(),
+  // GitHub logins separated by commas or spaces, checked as the server checks them (shared/issueTrust.ts).
+  trustedAuthors: z.string().superRefine((v, ctx) => {
+    const list = trustedAuthorList(v);
+    if ('error' in list) ctx.addIssue({ code: 'custom', message: list.error });
+  }),
 });
 
 export type OfficeSettingsForm = z.infer<typeof officeSettingsSchema>;
@@ -61,6 +67,7 @@ export function toOfficeForm(s: SwarmSettings): OfficeSettingsForm {
     pacingSessions: String(s.pacingSessions),
     trimIdleDesksMin: String(s.trimIdleDesksMin),
     autoUpdate: s.autoUpdate ?? false,
+    trustedAuthors: (s.trustedAuthors ?? []).join(', '),
   };
 }
 
@@ -89,6 +96,8 @@ export function officeSettingsPatch(v: OfficeSettingsForm, s: SwarmSettings): Pa
   for (const [k, value] of Object.entries(next) as [keyof SwarmSettings, unknown][]) {
     if (value !== s[k]) (patch as Record<string, unknown>)[k] = value;
   }
+  const trusted = trustedAuthorList(v.trustedAuthors);
+  if ('logins' in trusted && trusted.logins.join(',') !== (s.trustedAuthors ?? []).join(',')) patch.trustedAuthors = trusted.logins;
   return patch;
 }
 

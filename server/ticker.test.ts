@@ -25,7 +25,7 @@ const pull = (number: number, patch: Partial<PullInfo> = {}): PullInfo => ({
   pendingChecks: [],
   ...patch,
 });
-const issue = (number: number, title = `Issue ${number}`): IssueInfo => ({ number, title, body: '', url: '', labels: [], createdAt: '' });
+const issue = (number: number, title = `Issue ${number}`): IssueInfo => ({ number, title, body: '', url: '', labels: [], createdAt: '', author: '' });
 const repo = (pulls: PullInfo[], issues: IssueInfo[] = [], patch: Partial<RepoView> = {}) => ({ id: R, pulls, issues, lastSync: 1, ...patch }) as RepoView;
 const qa = (status: QaView['status'], patch: Partial<QaView> = {}): QaView => ({ repoId: R, prNumber: 12, status, round: 1, devAgentId: 'ken', qaAgentId: 'marple', summary: null, checks: [], commentUrl: null, mergeNote: null, ceoLooking: false, updatedAt: 0, ...patch });
 const texts = (ticks: { text: string }[]) => ticks.map((t) => t.text);

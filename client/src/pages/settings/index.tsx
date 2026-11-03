@@ -16,6 +16,7 @@ import { useSavedFlag } from '@/hooks/use-draft';
 import { EFFORTS, LIMITS, officeSettingsPatch, officeSettingsSchema, toOfficeForm, type OfficeSettingsForm } from '@/lib/office-settings';
 import { useTheme } from '@/lib/theme';
 import { useStore } from '@/store';
+import { APPROVED_LABEL } from '../../../../shared/issueTrust';
 import { modelSuggestions } from '../../../../shared/models';
 import { UI_THEMES, type UiTheme } from '../../../../shared/ui';
 import { CloudAgentsCard } from './cloud-agents';
@@ -255,6 +256,32 @@ function OfficeSettingsCards() {
             />
             <NumberField form={form} name="maxAgents" label="Most agents per project" hint={`From ${LIMITS.maxAgents.min} to ${LIMITS.maxAgents.max}. Hiring past it is refused.`} limits={LIMITS.maxAgents} />
             <NumberField form={form} name="ceoHeartbeatMin" label="CEO review every (minutes)" hint="Checks team sizes and stuck pull requests; 0 turns it off." limits={LIMITS.ceoHeartbeatMin} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Issue authors</CardTitle>
+            <CardDescription>An issue becomes an agent's instructions, so agents only start issues from people you trust on their own.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FormField
+              control={form.control}
+              name="trustedAuthors"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Trusted issue authors</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="teammate, another-login" spellCheck={false} autoComplete="off" className="font-mono" />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    GitHub logins, separated by commas. Your own{user ? ` (@${user})` : ''} is always trusted. Anyone else's issue waits on the board until you assign it, or until it has the{' '}
+                    <code className="font-mono">{APPROVED_LABEL}</code> label.
+                  </FormDescription>
+                  <FormMessage role="alert" />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 

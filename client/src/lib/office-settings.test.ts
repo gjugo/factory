@@ -17,6 +17,7 @@ const settings = {
   pacingSessions: 3,
   trimIdleDesksMin: 120,
   autoUpdate: true,
+  trustedAuthors: ['alice'],
 } as SwarmSettings;
 
 const errors = (patch: Record<string, unknown>) => {
@@ -51,6 +52,14 @@ describe('office settings form', () => {
     expect(errors({ ceoHeartbeatMin: '1441' })).toEqual({ ceoHeartbeatMin: 'The review interval must be from 0 to 1440' });
     expect(errors({ sessionLimit: '' })).toEqual({ sessionLimit: 'The session limit must be a whole number' });
     expect(errors({ trimIdleDesksMin: '-1' })).toEqual({ trimIdleDesksMin: 'Trim idle desks after must be a whole number' });
+  });
+
+  it('sends trusted authors as a list, only when the logins changed', () => {
+    expect(toOfficeForm(settings).trustedAuthors).toBe('alice');
+    expect(officeSettingsPatch({ ...toOfficeForm(settings), trustedAuthors: ' @alice ' }, settings)).toEqual({});
+    expect(officeSettingsPatch({ ...toOfficeForm(settings), trustedAuthors: 'alice, bob carol' }, settings)).toEqual({ trustedAuthors: ['alice', 'bob', 'carol'] });
+    expect(officeSettingsPatch({ ...toOfficeForm(settings), trustedAuthors: '' }, settings)).toEqual({ trustedAuthors: [] });
+    expect(errors({ trustedAuthors: 'alice, bad login!' })).toEqual({ trustedAuthors: '"login!" isn\'t a GitHub login' });
   });
 
   it('refuses an empty projects folder and over-long names', () => {
