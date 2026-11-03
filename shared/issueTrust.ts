@@ -2,10 +2,11 @@ import type { IssueInfo } from './types.ts';
 
 // Whose issues the office starts on its own. An issue's body becomes an agent's prompt, and agents run unsandboxed on
 // the manager's machine, so an issue anyone can file (a public repo, outside collaborators) only starts once someone
-// trusted vouches for it: the manager's own gh login, a login in settings.trustedAuthors, or the swarm:approved label
-// (adding a label takes triage access to the repo).
+// trusted vouches for it: it was filed by the manager's own gh login or a login in settings.trustedAuthors, or one of
+// them added the swarm:approved label. The label alone isn't enough: an issue template, a labelling bot or anyone with
+// triage access can put it on, so who added it is read from the issue's events (server/github.ts labelAdder).
 
-/** The label that lets an issue from anyone else start like the manager's own. */
+/** The label a trusted author adds to let an issue from anyone else start like the manager's own. */
 export const APPROVED_LABEL = 'swarm:approved';
 
 /** Most extra logins settings.trustedAuthors keeps. */
@@ -19,10 +20,15 @@ export function trustedSet(manager: string | null, extra: readonly string[]): Se
   return new Set([...(manager ? [manager] : []), ...extra].map((l) => l.toLowerCase()));
 }
 
-/** Whether an issue may start without the manager handing it out. An unknown author ('') is never trusted. */
-export function issueTrusted(issue: Pick<IssueInfo, 'author' | 'labels'>, trusted: ReadonlySet<string>): boolean {
-  if (issue.labels.some((l) => l.toLowerCase() === APPROVED_LABEL)) return true;
-  return !!issue.author && trusted.has(issue.author.toLowerCase());
+export const hasApprovedLabel = (issue: Pick<IssueInfo, 'labels'>) => issue.labels.some((l) => l.toLowerCase() === APPROVED_LABEL);
+
+/**
+ * Whether an issue may start without the manager handing it out. `approvedBy`: who last added the approved label (null
+ * or undefined while unknown). An unknown author or approver is never trusted.
+ */
+export function issueTrusted(issue: Pick<IssueInfo, 'author' | 'labels'>, trusted: ReadonlySet<string>, approvedBy?: string | null): boolean {
+  if (issue.author && trusted.has(issue.author.toLowerCase())) return true;
+  return hasApprovedLabel(issue) && !!approvedBy && trusted.has(approvedBy.toLowerCase());
 }
 
 /**

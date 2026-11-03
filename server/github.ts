@@ -298,6 +298,16 @@ export async function issueDetails(fullName: string, number: number): Promise<{ 
   return { title: raw.title, body: raw.body ?? '', createdAt: raw.createdAt };
 }
 
+/**
+ * Who last added `label` to an issue (null when nobody did, or their account is gone), from its events, oldest first.
+ * The jq runs on each page, printing one login per labelling; the last line is the latest.
+ */
+export async function labelAdder(fullName: string, number: number, label: string): Promise<string | null> {
+  const jq = `.[] | select(.event == "labeled" and (.label.name | ascii_downcase) == ${JSON.stringify(label.toLowerCase())}) | .actor.login // ""`;
+  const out = await gh(['api', '--paginate', `repos/${fullName}/issues/${number}/events`, '--jq', jq], SYNC_READ);
+  return out.trim().split('\n').at(-1)?.trim() || null;
+}
+
 export async function commentPull(fullName: string, number: number, body: string): Promise<string> {
   const out = await gh(['pr', 'comment', String(number), '-R', fullName, '--body-file', '-'], { input: body });
   return out.match(/https:\/\/github\.com\/\S+/)?.[0] ?? '';

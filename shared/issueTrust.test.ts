@@ -16,10 +16,21 @@ describe('issueTrusted', () => {
     expect(issueTrusted(issue(''), trusted)).toBe(false);
   });
 
-  it('trusts any issue with the approved label', () => {
-    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted)).toBe(true);
-    expect(issueTrusted(issue('stranger', ['Swarm:Approved']), trusted)).toBe(true);
-    expect(issueTrusted(issue('stranger', ['swarm:approved-ish']), trusted)).toBe(false);
+  it('trusts an issue a trusted author added the approved label to', () => {
+    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted, 'Manager')).toBe(true);
+    expect(issueTrusted(issue('stranger', ['Swarm:Approved']), trusted, 'teammate')).toBe(true);
+    expect(issueTrusted(issue('stranger', ['swarm:approved-ish']), trusted, 'manager')).toBe(false);
+  });
+
+  it("doesn't trust the approved label put on by anyone else, or by someone unknown", () => {
+    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted, 'stranger')).toBe(false); // an issue template, say
+    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted, 'labeler-bot[bot]')).toBe(false);
+    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted, null)).toBe(false);
+    expect(issueTrusted(issue('stranger', [APPROVED_LABEL]), trusted)).toBe(false);
+  });
+
+  it('needs the label still on: who once added it no longer counts after it came off', () => {
+    expect(issueTrusted(issue('stranger'), trusted, 'manager')).toBe(false);
   });
 
   it('trusts only the listed authors while the manager is unknown (gh not signed in)', () => {

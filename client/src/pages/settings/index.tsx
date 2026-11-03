@@ -275,7 +275,7 @@ function OfficeSettingsCards() {
                     <Input {...field} placeholder="teammate, another-login" spellCheck={false} autoComplete="off" className="font-mono" />
                   </FormControl>
                   <FormDescription className="text-xs">
-                    GitHub logins, separated by commas. Your own{user ? ` (@${user})` : ''} is always trusted. Anyone else's issue waits on the board until you assign it, or until it has the{' '}
+                    GitHub logins, separated by commas. Your own{user ? ` (@${user})` : ''} is always trusted. Anyone else's issue waits on the board until you assign it, or until you or a trusted author add the{' '}
                     <code className="font-mono">{APPROVED_LABEL}</code> label.
                   </FormDescription>
                   <FormMessage role="alert" />

@@ -43,6 +43,8 @@ export interface Backend {
   prDetails(fullName: string, number: number): Promise<github.PrDetails>;
   /** createdAt: when it was filed (absent when the demo no longer knows). */
   issueDetails(fullName: string, number: number): Promise<{ title: string; body: string; createdAt?: string }>;
+  /** Who last added a label to an issue (null: nobody, or unknown). */
+  labelAdder(fullName: string, number: number, label: string): Promise<string | null>;
   commentPull(fullName: string, number: number, body: string): Promise<string>;
   uploadEvidence(fullName: string, filePath: string, data: Buffer): Promise<string>;
   ensureClone(fullName: string): Promise<void>;
@@ -170,6 +172,7 @@ export const realBackend: Backend = {
   prForBranch: github.prForBranch,
   prDetails: github.prDetails,
   issueDetails: github.issueDetails,
+  labelAdder: github.labelAdder,
   commentPull: github.commentPull,
   uploadEvidence: github.uploadEvidence,
   ensureClone: workspace.ensureClone,

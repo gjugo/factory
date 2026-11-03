@@ -137,7 +137,8 @@ function CardBody({ repo, card, column, agents }: { repo: RepoView; card: Kanban
           <Notice title={`Filed by @${issue?.author || 'someone unknown'}, who isn't a trusted author`}>
             <p>
               Agents only start it when you assign it. Read it first: its description becomes an agent's instructions. To let it start on its own, label it{' '}
-              <code className="font-mono">{APPROVED_LABEL}</code> on GitHub, or add its author under Settings → Trusted issue authors.
+              <code className="font-mono">{APPROVED_LABEL}</code> on GitHub yourself (the label counts only when you or a trusted author added it), or add its author under
+              Settings → Trusted issue authors.
             </p>
           </Notice>
         )}
